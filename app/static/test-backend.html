@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Backend Test Page</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding: 24px; background:#f7fafc; color:#0f172a }
+    .card { background: white; padding: 18px; border-radius:8px; box-shadow: 0 6px 18px rgba(2,6,23,0.06); margin-bottom:16px }
+    input, textarea, select, button { font: inherit }
+    label { display:block; margin-bottom:6px; font-weight:600 }
+    .row { display:flex; gap:8px; align-items:center }
+    .small { font-size:13px; color:#475569 }
+    pre { background:#0b1220; color:#dbeafe; padding:12px; border-radius:6px; overflow:auto; max-height:360px }
+    .btn { padding:8px 12px; border-radius:6px; border:none; cursor:pointer }
+    .btn-primary { background:#2563eb; color:white }
+    .btn-ghost { background:#eef2ff; color:#3730a3 }
+    input[type=file] { padding:6px }
+  </style>
+</head>
+<body>
+  <div style="max-width:820px;margin:24px auto;">
+    <div id="messageBar" class="card" style="display:none;background:#e6fffa;color:#064e3b;border-left:6px solid #10b981"></div>
+
+    <!-- Login View -->
+    <div id="loginView" class="card">
+      <h1 style="margin-bottom:6px">🔐 Sign in</h1>
+      <p class="small">Sign in to view and edit your profile. For development you can use a dev token (format: <code>id:email:role</code>) or paste a JWT.</p>
+
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px">
+        <div>
+          <label for="devToken">Dev Token / JWT</label>
+          <input id="devToken" placeholder="e.g. 123:dev@example.com:user" style="width:100%; padding:8px; border-radius:6px; border:1px solid #e2e8f0"/>
+        </div>
+        <div class="row" style="align-self:end">
+          <button class="btn btn-primary" onclick="useTokenFromField()">Use token</button>
+          <button class="btn btn-ghost" onclick="clearToken()">Clear token</button>
+        </div>
+      </div>
+
+      <hr style="margin:12px 8px" />
+
+      <div style="display:grid;grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label>Email</label>
+          <input id="loginEmail" placeholder="email" style="width:100%; padding:8px; border-radius:6px; border:1px solid #e2e8f0" />
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="loginPassword" type="password" placeholder="password" style="width:100%; padding:8px; border-radius:6px; border:1px solid #e2e8f0" />
+        </div>
+        <div style="grid-column:1/-1; display:flex; gap:8px; margin-top:8px;">
+          <button class="btn btn-primary" onclick="login()">Sign in</button>
+          <button class="btn btn-ghost" onclick="callPing()">Ping API</button>
+          <button class="btn btn-ghost" onclick="callEchoSample()">Echo sample</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile View -->
+    <div id="profileView" class="card" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div style="display:flex;gap:12px;align-items:center">
+          <img id="profileAvatar" src="https://ui-avatars.com/api/?name=User&size=120&background=667eea&color=fff" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 6px 18px rgba(2,6,23,0.06)" />
+          <div>
+            <h2 id="displayName" style="margin:0">User</h2>
+            <div class="small" id="displayEmail">email@domain.com</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="logout()">Logout</button>
+          <button class="btn btn-ghost" onclick="refreshProfile()">Refresh</button>
+        </div>
+      </div>
+
+      <hr style="margin:12px 0" />
+      <form id="profileForm" onsubmit="event.preventDefault(); updateProfile();">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+          <div>
+            <label>First name</label>
+            <input id="firstName" style="padding:8px; border-radius:6px; border:1px solid #e2e8f0" />
+          </div>
+          <div>
+            <label>Last name</label>
+            <input id="lastName" style="padding:8px; border-radius:6px; border:1px solid #e2e8f0" />
+          </div>
+          <div>
+            <label>Phone</label>
+            <input id="phone" style="padding:8px; border-radius:6px; border:1px solid #e2e8f0" />
+          </div>
+          <div>
+            <label>Location</label>
+            <input id="location" style="padding:8px; border-radius:6px; border:1px solid #e2e8f0" />
+          </div>
+          <div style="grid-column:1/-1">
+            <label>About (max 400)</label>
+            <textarea id="aboutMe" rows="3" style="width:100%;padding:8px;border-radius:6px;border:1px solid #e2e8f0"></textarea>
+            <div class="small" id="aboutCounter">0/400</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="btn btn-primary" type="submit">Save changes</button>
+          <input id="avatarFile" type="file" style="margin-left:8px" />
+          <button type="button" class="btn btn-ghost" onclick="uploadAvatar()">Upload Avatar</button>
+          <button type="button" class="btn" onclick="deleteAvatar()">Remove Avatar</button>
+        </div>
+      </form>
+
+      <hr style="margin:12px 0" />
+      <div>
+        <h3 style="margin:0 0 8px 0">Raw Output</h3>
+        <pre id="output" style="background:#0b1220;color:#dbeafe;padding:12px;border-radius:6px;max-height:240px;overflow:auto">Responses will appear here...</pre>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:#94a3b8;margin-top:12px">Open <code>/static/test-backend.html</code> while the API is running to test the backend.</div>
+  </div>
+
+  <script>
+    // Small helpers for messages
+    function showMessage(text, type='info'){
+      const bar = document.getElementById('messageBar')
+      bar.textContent = text
+      bar.style.display = 'block'
+      bar.style.background = type==='error'? '#fee2e2' : '#e6fffa'
+      bar.style.color = type==='error'? '#7f1d1d' : '#064e3b'
+      setTimeout(()=> bar.style.display='none', 4000)
+    }
+
+    // Token helpers
+    function getToken(){ return localStorage.getItem('api_token') || null }
+    function setToken(t){ localStorage.setItem('api_token', t); showMessage('Token saved') }
+    function clearToken(){ localStorage.removeItem('api_token'); showMessage('Token cleared'); showLoginView() }
+    function useTokenFromField(){ const t = document.getElementById('devToken').value.trim(); if(!t) return alert('Paste a token'); setToken(t); initAfterAuth() }
+
+    // Network wrapper
+    async function fetchWrapper(method, path, body=null, isJson=true, isForm=false){
+      const headers = {}
+      const token = getToken()
+      if(token) headers['Authorization'] = 'Bearer ' + token
+      let options = { method, headers }
+      if(body && !isForm){ if(isJson){ headers['Content-Type']='application/json'; options.body=JSON.stringify(body) } else options.body = body }
+      if(isForm && body) options.body = body
+      try{
+        const res = await fetch(path, options)
+        const text = await res.text()
+        try{ return { status: res.status, ok: res.ok, data: JSON.parse(text) } }catch{ return { status: res.status, ok: res.ok, text } }
+      }catch(e){ return { error: String(e) } }
+    }
+
+    // Auth actions
+    async function login(){
+      const email = document.getElementById('loginEmail').value.trim()
+      const password = document.getElementById('loginPassword').value
+      if(!email || !password) return alert('Enter email and password')
+      const r = await fetchWrapper('POST','/api/auth/login',{ email, password })
+      document.getElementById('output').textContent = JSON.stringify(r,null,2)
+      if(r && r.data && r.data.session && r.data.session.access_token){ setToken(r.data.session.access_token); initAfterAuth(); showMessage('Login successful') }
+      else showMessage('Login failed', 'error')
+    }
+
+    async function callPing(){ const r = await fetchWrapper('GET', '/api/auth/debug/ping'); document.getElementById('output').textContent = JSON.stringify(r,null,2); showMessage('Ping complete') }
+    async function callEchoSample(){ const r = await fetchWrapper('POST','/api/auth/debug/echo',{ hello:'world' }); document.getElementById('output').textContent = JSON.stringify(r,null,2); }
+
+    async function initAfterAuth(){
+      // Try to fetch /me to validate token then show profile
+      const me = await fetchWrapper('GET','/api/auth/me')
+      if(me && me.ok){ showProfileView(); refreshProfile(); }
+      else{ showMessage('Token invalid or expired', 'error'); clearToken() }
+    }
+
+    function showLoginView(){ document.getElementById('loginView').style.display='block'; document.getElementById('profileView').style.display='none' }
+    function showProfileView(){ document.getElementById('loginView').style.display='none'; document.getElementById('profileView').style.display='block' }
+
+    async function refreshProfile(){
+      const prof = await fetchWrapper('GET','/api/user/profile')
+      document.getElementById('output').textContent = JSON.stringify(prof,null,2)
+      if(prof && prof.ok && prof.data){ const d = prof.data
+        document.getElementById('profileAvatar').src = d.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent((d.first_name||'')+' '+(d.last_name||''))}&size=120&background=667eea&color=fff`
+        document.getElementById('displayName').textContent = (d.first_name||'') + (d.last_name? ' '+d.last_name : '') || 'User'
+        document.getElementById('displayEmail').textContent = d.email || ''
+        document.getElementById('firstName').value = d.first_name || ''
+        document.getElementById('lastName').value = d.last_name || ''
+        document.getElementById('phone').value = d.phone || ''
+        document.getElementById('location').value = d.location || ''
+        document.getElementById('aboutMe').value = d.about_me || ''
+        document.getElementById('aboutCounter').textContent = (d.about_me || '').length + '/400'
+      } else showMessage('Failed loading profile', 'error')
+    }
+
+    async function updateProfile(){
+      const body = {}
+      ['firstName','lastName','phone','location','aboutMe'].forEach(id=>{
+        const el = document.getElementById(id)
+        if(el && el.value && el.value.trim() !== ''){
+          const key = id === 'aboutMe' ? 'about_me' : id.replace(/([A-Z])/g, '_$1').toLowerCase()
+          body[key] = el.value
+        }
+      })
+      if(!Object.keys(body).length){ showMessage('Fill in at least one field', 'error'); return }
+      const r = await fetchWrapper('PUT','/api/user/profile', body)
+      document.getElementById('output').textContent = JSON.stringify(r,null,2)
+      if(r && r.ok){ showMessage('Profile updated') ; refreshProfile() } else showMessage('Update failed','error')
+    }
+
+    async function uploadAvatar(){
+      const input = document.getElementById('avatarFile')
+      if(!input.files || !input.files[0]) return alert('Choose a file')
+      const fd = new FormData(); fd.append('file', input.files[0])
+      const r = await fetchWrapper('POST','/api/user/avatar', fd, false, true)
+      document.getElementById('output').textContent = JSON.stringify(r,null,2)
+      if(r && r.ok){ showMessage('Avatar uploaded'); refreshProfile() } else showMessage('Upload failed','error')
+    }
+
+    async function deleteAvatar(){ const r = await fetchWrapper('DELETE','/api/user/avatar'); document.getElementById('output').textContent = JSON.stringify(r,null,2); if(r && r.ok){ showMessage('Avatar removed'); refreshProfile() } else showMessage('Remove failed','error') }
+
+    function logout(){ clearToken(); showMessage('Logged out'); showLoginView() }
+
+    // Auto behavior on page load
+    window.addEventListener('load', ()=>{
+      const t = getToken(); const devField = document.getElementById('devToken')
+      if(t){ devField.value = t; initAfterAuth() } else showLoginView()
+
+      // about counter
+      const about = document.getElementById('aboutMe')
+      if(about) about.addEventListener('input', ()=> document.getElementById('aboutCounter').textContent = about.value.length + '/400')
+    })
+  </script>
+</body>
+</html>

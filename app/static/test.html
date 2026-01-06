@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile Test Interface</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 { color: #333; margin-bottom: 16px; }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .btn:hover { background: #5568d3; }
+        .btn-success { background: #10b981; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 4px; font-weight: 500; color: #555; }
+        .profile-img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #667eea;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-value { font-size: 32px; font-weight: bold; }
+        .stat-label { font-size: 14px; opacity: 0.9; }
+        .activity-item {
+            border-left: 3px solid #667eea;
+            padding: 12px;
+            margin: 8px 0;
+            background: #f9fafb;
+            border-radius: 4px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        #message {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: none;
+        }
+        .success { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+        .error { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+        .hidden { display: none; }
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🎯 Volunteer Platform - User Profile Test</h1>
+            <p>API Base URL: <strong id="apiUrl">http://localhost:8000</strong></p>
+            <div id="message"></div>
+        </div>
+
+        <!-- Auth Section -->
+        <div id="authSection" class="card">
+            <h2>🔐 Authentication</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Register -->
+                <div>
+                    <h3>Register</h3>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="regEmail" placeholder="user@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="regPassword" placeholder="••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="regFirstName" placeholder="ដារា">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="regLastName" placeholder="លី">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="regPhone" placeholder="+855 23 123 456">
+                    </div>
+                    <button class="btn btn-success" onclick="register()">Register</button>
+                </div>
+
+                <!-- Login -->
+                <div>
+                    <h3>Login</h3>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="loginEmail" placeholder="user@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••">
+                    </div>
+                    <button class="btn btn-success" onclick="login()">Login</button>
+                    <button class="btn btn-danger" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Dashboard -->
+        <div id="dashboardSection" class="card hidden">
+            <h2>📊 User Dashboard</h2>
+            
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="showTab('profile')">Profile</button>
+                <button class="tab-btn" onclick="showTab('stats')">Statistics</button>
+                <button class="tab-btn" onclick="showTab('activities')">Activities</button>
+                <button class="tab-btn" onclick="showTab('achievements')">Achievements</button>
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="profileTab" class="tab-content">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img id="avatarPreview" src="https://via.placeholder.com/120" class="profile-img" alt="Avatar">
+                    <br>
+                    <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                    <button class="btn" onclick="document.getElementById('avatarInput').click()">Upload Avatar</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="firstName" placeholder="ដារា">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="lastName" placeholder="លី">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" placeholder="user@example.com" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="phone" placeholder="+855 23 123 456">
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" id="location" placeholder="Phnom Penh">
+                    </div>
+                    <div class="form-group">
+                        <label>Birth Date</label>
+                        <input type="date" id="birthDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Availability</label>
+                        <select id="availability">
+                            <option value="weekend">Weekend</option>
+                            <option value="weekdays">Weekdays</option>
+                            <option value="flexible">Flexible</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Time Preference</label>
+                        <select id="timePreference">
+                            <option value="morning">Morning</option>
+                            <option value="afternoon">Afternoon</option>
+                            <option value="evening">Evening</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>About Me (Max 400 characters)</label>
+                    <textarea id="aboutMe" rows="4" maxlength="400" placeholder="Tell us about yourself..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Skills</label>
+                    <input type="text" id="skills" placeholder="Communication, Event Planning, Teaching">
+                </div>
+
+                <h3 style="margin-top: 20px;">Emergency Contact</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Contact Name</label>
+                        <input type="text" id="emergencyName" placeholder="Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Phone</label>
+                        <input type="tel" id="emergencyPhone" placeholder="+855 92 123 456">
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 20px;">Address</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Street</label>
+                        <input type="text" id="addressStreet" placeholder="Street 271">
+                    </div>
+                    <div class="form-group">
+                        <label>City</label>
+                        <input type="text" id="addressCity" placeholder="Phnom Penh">
+                    </div>
+                    <div class="form-group">
+                        <label>District</label>
+                        <input type="text" id="addressDistrict" placeholder="District">
+                    </div>
+                    <div class="form-group">
+                        <label>Province</label>
+                        <input type="text" id="addressProvince" placeholder="Province">
+                    </div>
+                </div>
+
+                <button class="btn btn-success" onclick="updateProfile()">Save Changes</button>
+                <button class="btn" onclick="loadProfile()">Refresh</button>
+            </div>
+
+            <!-- Stats Tab -->
+            <div id="statsTab" class="tab-content hidden">
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalHours">0</div>
+                        <div class="stat-label">Total Hours</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedProjects">0</div>
+                        <div class="stat-label">Completed Projects</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="upcomingEvents">0</div>
+                        <div class="stat-label">Upcoming Events</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalPoints">0</div>
+                        <div class="stat-label">Points</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="loadStats()">Refresh Stats</button>
+            </div>
+
+            <!-- Activities Tab -->
+            <div id="activitiesTab" class="tab-content hidden">
+                <div style="margin-bottom: 16px;">
+                    <button class="btn" onclick="loadActivities()">All</button>
+                    <button class="btn" onclick="loadActivities('completed')">Completed</button>
+                    <button class="btn" onclick="loadActivities('upcoming')">Upcoming</button>
+                </div>
+                <div id="activitiesList"></div>
+            </div>
+
+            <!-- Achievements Tab -->
+            <div id="achievementsTab" class="tab-content hidden">
+                <div id="achievementsList"></div>
+                <button class="btn" onclick="loadAchievements()">Refresh Achievements</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let accessToken = null;
+        const API_URL = 'http://localhost:8000';
+
+        // Show message
+        function showMessage(text, type = 'success') {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = type;
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 5000);
+        }
+
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            event.target.classList.add('active');
+        }
+
+        // Register
+        async function register() {
+            const data = {
+                email: document.getElementById('regEmail').value,
+                password: document.getElementById('regPassword').value,
+                first_name: document.getElementById('regFirstName').value,
+                last_name: document.getElementById('regLastName').value,
+                phone: document.getElementById('regPhone').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    accessToken = result.session.access_token;
+                    showMessage('Registration successful!', 'success');
+                    document.getElementById('authSection').classList.add('hidden');
+                    document.getElementById('dashboardSection').classList.remove('hidden');
+                    loadProfile();
+                } else {
+                    showMessage('Registration failed: ' + result.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Login
+        async function login() {
+            const data = {
+                email: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPassword').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    accessToken = result.session.access_token;
+                    showMessage('Login successful!', 'success');
+                    document.getElementById('authSection').classList.add('hidden');
+                    document.getElementById('dashboardSection').classList.remove('hidden');
+                    loadProfile();
+                    loadStats();
+                } else {
+                    showMessage('Login failed: ' + result.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Logout
+        async function logout() {
+            accessToken = null;
+            document.getElementById('authSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            showMessage('Logged out successfully', 'success');
+        }
+
+        // Load Profile
+        async function loadProfile() {
+            if (!accessToken) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                const profile = await response.json();
+                if (response.ok) {
+                    document.getElementById('firstName').value = profile.first_name || '';
+                    document.getElementById('lastName').value = profile.last_name || '';
+                    document.getElementById('email').value = profile.email || '';
+                    document.getElementById('phone').value = profile.phone || '';
+                    document.getElementById('location').value = profile.location || '';
+                    document.getElementById('birthDate').value = profile.birth_date || '';
+                    document.getElementById('aboutMe').value = profile.about_me || '';
+                    document.getElementById('skills').value = profile.skills || '';
+                    document.getElementById('availability').value = profile.availability || 'flexible';
+                    document.getElementById('timePreference').value = profile.time_preference || 'morning';
+                    document.getElementById('emergencyName').value = profile.emergency_contact_name || '';
+                    document.getElementById('emergencyPhone').value = profile.emergency_contact_phone || '';
+                    document.getElementById('addressStreet').value = profile.address_street || '';
+                    document.getElementById('addressCity').value = profile.address_city || '';
+                    document.getElementById('addressDistrict').value = profile.address_district || '';
+                    document.getElementById('addressProvince').value = profile.address_province || '';
+                    
+                    if (profile.avatar_url) {
+                        document.getElementById('avatarPreview').src = profile.avatar_url;
+                    }
+                    
+                    showMessage('Profile loaded', 'success');
+                } else {
+                    showMessage('Failed to load profile', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Update Profile
+        async function updateProfile() {
+            if (!accessToken) return;
+
+            const data = {
+                first_name: document.getElementById('firstName').value,
+                last_name: document.getElementById('lastName').value,
+                phone: document.getElementById('phone').value,
+                location: document.getElementById('location').value,
+                birth_date: document.getElementById('birthDate').value || null,
+                about_me: document.getElementById('aboutMe').value,
+                skills: document.getElementById('skills').value,
+                availability: document.getElementById('availability').value,
+                time_preference: document.getElementById('timePreference').value,
+                emergency_contact_name: document.getElementById('emergencyName').value,
+                emergency_contact_phone: document.getElementById('emergencyPhone').value,
+                address_street: document.getElementById('addressStreet').value,
+                address_city: document.getElementById('addressCity').value,
+                address_district: document.getElementById('addressDistrict').value,
+                address_province: document.getElementById('addressProvince').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showMessage('Profile updated successfully!', 'success');
+                } else {
+                    showMessage('Update failed: ' + result.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Upload Avatar
+        document.getElementById('avatarInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !accessToken) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/avatar`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById('avatarPreview').src = result.avatar_url;
+                    showMessage('Avatar uploaded!', 'success');
+                } else {
+                    showMessage('Upload failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        });
+
+        // Load Stats
+        async function loadStats() {
+            if (!accessToken) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/stats`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                const stats = await response.json();
+                if (response.ok) {
+                    document.getElementById('totalHours').textContent = stats.total_hours;
+                    document.getElementById('completedProjects').textContent = stats.completed_projects;
+                    document.getElementById('upcomingEvents').textContent = stats.upcoming_events;
+                    document.getElementById('totalPoints').textContent = stats.points;
+                    showMessage('Stats loaded', 'success');
+                }
+            } catch (error) {
+                showMessage('Error loading stats', 'error');
+            }
+        }
+
+        // Load Activities
+        async function loadActivities(status = null) {
+            if (!accessToken) return;
+
+            const url = status 
+                ? `${API_URL}/api/user/activities?status_filter=${status}`
+                : `${API_URL}/api/user/activities`;
+
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                const activities = await response.json();
+                const list = document.getElementById('activitiesList');
+                
+                if (response.ok && activities.length > 0) {
+                    list.innerHTML = activities.map(a => `
+                        <div class="activity-item">
+                            <h4>${a.activity_name} / ${a.activity_name_en}</h4>
+                            <p><strong>Organization:</strong> ${a.organization}</p>
+                            <p><strong>Date:</strong> ${a.date} | <strong>Hours:</strong> ${a.hours}h</p>
+                            <span class="badge badge-${a.status === 'completed' ? 'success' : 'info'}">${a.status}</span>
+                            ${a.rating ? `<span class="badge badge-warning">⭐ ${a.rating}</span>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<p>No activities found.</p>';
+                }
+            } catch (error) {
+                showMessage('Error loading activities', 'error');
+            }
+        }
+
+        // Load Achievements
+        async function loadAchievements() {
+            if (!accessToken) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/achievements`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                const achievements = await response.json();
+                const list = document.getElementById('achievementsList');
+                
+                if (response.ok && achievements.length > 0) {
+                    list.innerHTML = achievements.map(a => `
+                        <div class="activity-item">
+                            <h4><i class="bi ${a.icon}"></i> ${a.badge_name} / ${a.badge_name_en}</h4>
+                            <p>${a.description}</p>
+                            <p><small>Earned: ${new Date(a.earned_date).toLocaleDateString()}</small></p>
+                            ${a.progress ? `<p>Progress: ${a.progress}/${a.target || 100}</p>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<p>No achievements yet. Keep volunteering!</p>';
+                }
+            } catch (error) {
+                showMessage('Error loading achievements', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

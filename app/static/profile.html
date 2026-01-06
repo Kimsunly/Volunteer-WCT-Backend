@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile Management - Test Interface</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-bottom: 8px; }
+        h2 { color: #667eea; margin-bottom: 20px; font-size: 24px; }
+        h3 { color: #555; margin: 24px 0 12px; font-size: 18px; }
+        
+        /* Form Styles */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .form-group { margin-bottom: 0; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .char-counter {
+            text-align: right;
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+        
+        /* Button Styles */
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-right: 12px;
+        }
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-success { background: #10b981; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: #6b7280; }
+        .btn-secondary:hover { background: #4b5563; }
+        .btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Avatar Section */
+        .avatar-section {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border-radius: 12px;
+        }
+        .avatar-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .avatar-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        /* Message Styles */
+        .message {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+        .message.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        /* Profile Completeness */
+        .completeness-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        .progress-bar {
+            background: rgba(255,255,255,0.2);
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+        .progress-fill {
+            background: white;
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.5s ease-out;
+        }
+        .missing-fields {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .field-tag {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 13px;
+        }
+        
+        /* Login Section */
+        .login-section {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .hidden { display: none !important; }
+        
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Section -->
+        <div id="loginSection" class="card login-section">
+            <h1>🔐 Login</h1>
+            <p style="color: #666; margin-bottom: 24px;">Enter your credentials to manage your profile</p>
+            
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="loginEmail" placeholder="your@email.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" required>
+            </div>
+            
+            <button class="btn btn-success" onclick="login()" style="width: 100%; margin-top: 16px;">
+                Login
+            </button>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <input id="testToken" placeholder="dev-token (id:email:role)" style="flex:1; padding:8px; border-radius:8px; border:1px solid #e5e7eb;" />
+                <button class="btn btn-secondary" onclick="useToken()" title="Use a dev token to bypass login">Use token</button>
+            </div>
+        </div>
+
+        <!-- Profile Management Section -->
+        <div id="profileSection" class="hidden">
+            <!-- Header -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1>👤 Profile Management</h1>
+                        <p style="color: #666; margin-top: 8px;">Manage your volunteer profile information</p>
+                    </div>
+                    <button class="btn btn-danger" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <!-- Message Display -->
+            <div id="message" class="message"></div>
+
+            <!-- Profile Completeness -->
+            <div class="completeness-card" id="completenessCard">
+                <h3 style="color: white; margin: 0 0 8px 0;">Profile Completeness</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span id="completenessText">Loading...</span>
+                    <span id="completenessPercent" style="font-size: 32px; font-weight: bold;">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div id="missingFieldsContainer" class="hidden">
+                    <small>Missing fields:</small>
+                    <div class="missing-fields" id="missingFields"></div>
+                </div>
+            </div>
+
+            <!-- Profile Form -->
+            <div class="card">
+                <h2>✏️ Edit Profile</h2>
+
+                <!-- Avatar Section -->
+                <div class="avatar-section">
+                    <img id="avatarPreview" src="https://ui-avatars.com/api/?name=User&size=120&background=667eea&color=fff" class="avatar-preview" alt="Avatar">
+                    <div class="avatar-actions">
+                        <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                        <button class="btn" onclick="document.getElementById('avatarInput').click()">
+                            📷 Upload Photo
+                        </button>
+                        <button class="btn btn-secondary" onclick="deleteAvatar()">
+                            🗑️ Remove Photo
+                        </button>
+                    </div>
+                </div>
+
+                <form id="profileForm" onsubmit="event.preventDefault(); updateProfile();">
+                    <!-- Basic Information -->
+                    <h3>📋 Basic Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>First Name <span style="color: red;">*</span></label>
+                            <input type="text" id="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name <span style="color: red;">*</span></label>
+                            <input type="text" id="lastName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="email" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="tel" id="phone" placeholder="+855 23 123 456">
+                        </div>
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" id="location" placeholder="Phnom Penh">
+                        </div>
+                        <div class="form-group">
+                            <label>Birth Date</label>
+                            <input type="date" id="birthDate">
+                        </div>
+                    </div>
+
+                    <!-- About Me -->
+                    <div class="form-group full-width">
+                        <label>About Me (Max 400 characters)</label>
+                        <textarea id="aboutMe" maxlength="400" placeholder="Tell us about yourself..."></textarea>
+                        <div class="char-counter" id="aboutCounter">0/400</div>
+                    </div>
+
+                    <!-- Skills & Availability -->
+                    <h3>💼 Skills & Availability</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>Skills (comma-separated)</label>
+                            <input type="text" id="skills" placeholder="Communication, Teaching, Event Planning">
+                        </div>
+                        <div class="form-group">
+                            <label>Availability</label>
+                            <select id="availability">
+                                <option value="">Select...</option>
+                                <option value="weekend">Weekend</option>
+                                <option value="weekdays">Weekdays</option>
+                                <option value="flexible">Flexible</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Time Preference</label>
+                            <select id="timePreference">
+                                <option value="">Select...</option>
+                                <option value="morning">Morning</option>
+                                <option value="afternoon">Afternoon</option>
+                                <option value="evening">Evening</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <h3>🚨 Emergency Contact</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Contact Name</label>
+                            <input type="text" id="emergencyName" placeholder="Full Name">
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Phone</label>
+                            <input type="tel" id="emergencyPhone" placeholder="+855 92 123 456">
+                        </div>
+                    </div>
+
+                    <!-- Address -->
+                    <h3>🏠 Address</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>Street Address</label>
+                            <input type="text" id="addressStreet" placeholder="Street 271">
+                        </div>
+                        <div class="form-group">
+                            <label>City</label>
+                            <input type="text" id="addressCity" placeholder="Phnom Penh">
+                        </div>
+                        <div class="form-group">
+                            <label>District</label>
+                            <input type="text" id="addressDistrict" placeholder="District">
+                        </div>
+                        <div class="form-group">
+                            <label>Province</label>
+                            <input type="text" id="addressProvince" placeholder="Province">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="margin-top: 32px; display: flex; gap: 12px;">
+                        <button type="submit" class="btn btn-success" id="saveBtn">
+                            💾 Save Changes
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="loadProfile()">
+                            🔄 Refresh
+                        </button>
+                        <button type="button" class="btn" onclick="checkCompleteness()">
+                            📊 Check Completeness
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base detection: prefer the current origin when it's the API server,
+        // otherwise fall back to localhost:8000 (useful when editing via Live Server)
+        let API_URL = 'http://localhost:8000';
+        let accessToken = null;
+
+        async function detectApiBase() {
+            // Try current origin first (useful when the file is served by the API itself)
+            try {
+                const origin = window.location.origin;
+                if (origin && origin !== 'null' && origin !== 'file://') {
+                    const probe = await fetch(origin + '/api/auth/debug/ping', { method: 'GET' });
+                    if (probe && probe.ok) {
+                        API_URL = origin;
+                        showMessage(`Using API at ${API_URL}`, 'info');
+                        return;
+                    }
+                }
+            } catch (e) {
+                // ignore - we'll fallback
+            }
+
+            // fallback to localhost:8000
+            API_URL = 'http://localhost:8000';
+            showMessage(`Using API at ${API_URL}`, 'info');
+        }
+
+        // Show message
+        function showMessage(text, type = 'success') {
+            const msg = document.getElementById('message');
+            msg.innerHTML = `<strong>${type === 'success' ? '✅' : '❌'}</strong> ${text}`;
+            msg.className = `message ${type}`;
+            msg.style.display = 'flex';
+            setTimeout(() => msg.style.display = 'none', 5000);
+        }
+
+        // Safely parse JSON responses (handles empty or non-JSON bodies)
+        async function parseJSONSafe(response) {
+            try {
+                const text = await response.text();
+                if (!text) return {};
+                try {
+                    return JSON.parse(text);
+                } catch (err) {
+                    return { detail: text };
+                }
+            } catch (err) {
+                return { detail: 'Failed to read response body' };
+            }
+        }
+
+        // Character counter for about me
+        document.addEventListener('DOMContentLoaded', () => {
+            const aboutMe = document.getElementById('aboutMe');
+            const counter = document.getElementById('aboutCounter');
+            
+            aboutMe?.addEventListener('input', () => {
+                counter.textContent = `${aboutMe.value.length}/400`;
+            });
+        });
+
+        // Login
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                alert('Please enter email and password');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await parseJSONSafe(response);
+                console.log('Login response', response.status, result);
+
+                if (response.ok) {
+                    const token = result.session?.access_token || null;
+                    if (!token) {
+                        showMessage('Login succeeded but no token returned', 'error');
+                        return;
+                    }
+                    // persist and initialize
+                    setStoredToken(token);
+                    await initAfterAuth();
+                    showMessage('Login successful! Welcome back! 🎉', 'success');
+                } else {
+                    showMessage('Login failed: ' + (result.detail || result.message || JSON.stringify(result) || response.statusText), 'error');
+                }
+            } catch (error) {
+                showMessage('Login error: ' + error.message, 'error');
+            }
+        }
+
+        // Set token from input for quick testing
+        function useToken() {
+            const token = document.getElementById('testToken').value.trim();
+            if (!token) {
+                alert('Please enter a dev token (format: id:email:role) or paste a valid JWT');
+                return;
+            }
+            setStoredToken(token);
+            initAfterAuth();
+            showMessage('Using provided token for testing', 'info');
+        }
+
+        // Logout
+        async function logout() {
+            if (accessToken) {
+                try {
+                    await fetch(`${API_URL}/api/auth/logout`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                } catch (e) {
+                    console.warn('Logout request failed', e);
+                }
+            }
+
+            accessToken = null;
+            localStorage.removeItem('api_token');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('profileSection').classList.add('hidden');
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('testToken').value = '';
+            showMessage('Logged out', 'info');
+        }
+
+        // Load Profile
+        async function loadProfile() {
+            if (!accessToken) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                const profile = await parseJSONSafe(response);
+                console.log('Load profile', response.status, profile);
+                
+                if (response.ok) {
+                    // Populate form fields
+                    document.getElementById('firstName').value = profile.first_name || '';
+                    document.getElementById('lastName').value = profile.last_name || '';
+                    document.getElementById('email').value = profile.email || '';
+                    document.getElementById('phone').value = profile.phone || '';
+                    document.getElementById('location').value = profile.location || '';
+                    document.getElementById('birthDate').value = profile.birth_date || '';
+                    document.getElementById('aboutMe').value = profile.about_me || '';
+                    document.getElementById('skills').value = profile.skills || '';
+                    document.getElementById('availability').value = profile.availability || '';
+                    document.getElementById('timePreference').value = profile.time_preference || '';
+                    document.getElementById('emergencyName').value = profile.emergency_contact_name || '';
+                    document.getElementById('emergencyPhone').value = profile.emergency_contact_phone || '';
+                    document.getElementById('addressStreet').value = profile.address_street || '';
+                    document.getElementById('addressCity').value = profile.address_city || '';
+                    document.getElementById('addressDistrict').value = profile.address_district || '';
+                    document.getElementById('addressProvince').value = profile.address_province || '';
+                    
+                    // Update avatar
+                    if (profile.avatar_url) {
+                        document.getElementById('avatarPreview').src = profile.avatar_url;
+                    } else {
+                        const name = `${profile.first_name || 'User'}+${profile.last_name || ''}`;
+                        document.getElementById('avatarPreview').src = 
+                            `https://ui-avatars.com/api/?name=${name}&size=120&background=667eea&color=fff`;
+                    }
+                    
+                    // Update character counter
+                    const aboutMe = document.getElementById('aboutMe');
+                    document.getElementById('aboutCounter').textContent = `${aboutMe.value.length}/400`;
+                    
+                    showMessage('Profile loaded successfully! 📋', 'info');
+                } else {
+                    showMessage('Failed to load profile: ' + (profile.detail || response.statusText), 'error');
+                }
+            } catch (error) {
+                showMessage('Error loading profile: ' + error.message, 'error');
+            }
+        }
+
+        // Update Profile
+        async function updateProfile() {
+            if (!accessToken) return;
+
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner"></span>Saving...';
+
+            const data = {
+                first_name: document.getElementById('firstName').value,
+                last_name: document.getElementById('lastName').value,
+                phone: document.getElementById('phone').value || null,
+                location: document.getElementById('location').value || null,
+                birth_date: document.getElementById('birthDate').value || null,
+                about_me: document.getElementById('aboutMe').value || null,
+                skills: document.getElementById('skills').value || null,
+                availability: document.getElementById('availability').value || null,
+                time_preference: document.getElementById('timePreference').value || null,
+                emergency_contact_name: document.getElementById('emergencyName').value || null,
+                emergency_contact_phone: document.getElementById('emergencyPhone').value || null,
+                address_street: document.getElementById('addressStreet').value || null,
+                address_city: document.getElementById('addressCity').value || null,
+                address_district: document.getElementById('addressDistrict').value || null,
+                address_province: document.getElementById('addressProvince').value || null
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await parseJSONSafe(response);
+                console.log('Update profile', response.status, result);
+
+                if (response.ok) {
+                    showMessage(result.message || 'Profile updated successfully! ✅', 'success');
+                    await checkCompleteness();
+                } else {
+                    showMessage('Update failed: ' + (result.detail || result.message || response.statusText), 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '💾 Save Changes';
+            }
+        }
+
+        // Upload Avatar
+        document.getElementById('avatarInput')?.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !accessToken) return;
+
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                showMessage('File size must be less than 5MB', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/avatar`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: formData
+                });
+
+                const result = await parseJSONSafe(response);
+                console.log('Avatar upload', response.status, result);
+
+                if (response.ok) {
+                    if (result.avatar_url) document.getElementById('avatarPreview').src = result.avatar_url;
+                    showMessage('Avatar uploaded successfully! 📷', 'success');
+                    await checkCompleteness();
+                } else {
+                    showMessage('Upload failed: ' + (result.detail || result.message || response.statusText), 'error');
+                }
+            } catch (error) {
+                showMessage('Error uploading avatar: ' + error.message, 'error');
+            }
+        });
+
+        // Delete Avatar
+        async function deleteAvatar() {
+            if (!accessToken) return;
+            
+            if (!confirm('Are you sure you want to remove your profile photo?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/avatar`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                const result = await parseJSONSafe(response);
+                console.log('Delete avatar', response.status, result);
+
+                if (response.ok) {
+                    const firstName = document.getElementById('firstName').value || 'User';
+                    const lastName = document.getElementById('lastName').value || '';
+                    document.getElementById('avatarPreview').src = 
+                        `https://ui-avatars.com/api/?name=${firstName}+${lastName}&size=120&background=667eea&color=fff`;
+                    showMessage('Avatar removed successfully! 🗑️', 'success');
+                    await checkCompleteness();
+                } else {
+                    showMessage('Failed to remove avatar: ' + (result.detail || result.message || response.statusText), 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Check Profile Completeness
+        async function checkCompleteness() {
+            if (!accessToken) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/user/profile/complete`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                const result = await parseJSONSafe(response);
+                console.log('Completeness', response.status, result);
+                
+                if (response.ok) {
+                    const percent = result.percentage || 0;
+                    document.getElementById('completenessPercent').textContent = percent + '%';
+                    document.getElementById('progressFill').style.width = percent + '%';
+                    document.getElementById('completenessText').textContent = 
+                        `${result.filled_fields || 0} of ${result.total_fields || 0} fields completed`;
+                    
+                    // Show missing fields
+                    if (Array.isArray(result.missing_fields) && result.missing_fields.length > 0) {
+                        const container = document.getElementById('missingFieldsContainer');
+                        const fieldsDiv = document.getElementById('missingFields');
+                        container.classList.remove('hidden');
+                        fieldsDiv.innerHTML = result.missing_fields
+                            .map(field => `<span class="field-tag">${field.replace('_', ' ')}</span>`)
+                            .join('');
+                    } else {
+                        document.getElementById('missingFieldsContainer').classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Completeness check error:', error);
+            }
+        }
+        // --- Token helpers and init ---
+        function setStoredToken(token) {
+            accessToken = token;
+            try { localStorage.setItem('api_token', token); } catch (e) { console.warn('Could not persist token', e); }
+            // reflect in testing input
+            const t = document.getElementById('testToken'); if (t) t.value = token;
+        }
+
+        async function initAfterAuth() {
+            if (!accessToken) return;
+            try {
+                const resp = await fetch(`${API_URL}/api/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (resp.ok) {
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('profileSection').classList.remove('hidden');
+                    await loadProfile();
+                    await checkCompleteness();
+                    showMessage('Authenticated', 'success');
+                } else {
+                    // token invalid
+                    localStorage.removeItem('api_token');
+                    accessToken = null;
+                    document.getElementById('testToken').value = '';
+                    showMessage('Stored token invalid — please sign in again', 'error');
+                }
+            } catch (e) {
+                console.error('Auth check failed', e);
+            }
+        }
+
+        // Auto-init: detect API base, then initialize from stored token
+        window.addEventListener('load', async () => {
+            await detectApiBase();
+            const stored = localStorage.getItem('api_token');
+            if (stored) { setStoredToken(stored); initAfterAuth(); }
+        });    </script>
+</body>
+</html>
