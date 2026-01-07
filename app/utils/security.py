@@ -1,85 +1,76 @@
-from fastapi import Request, HTTPException, status
-from typing import Any, Optional
-
-
-def extract_user_id(user: Any) -> Optional[str]:
-    """Extract a user id from a supabase user object or plain dict/object."""
-    if not user:
-        return None
-
-    # dict-like
-    if isinstance(user, dict):
-        return user.get("id") or user.get("user_id") or user.get("sub")
-
-    # object-like
-    return getattr(user, "id", None) or getattr(user, "user_id", None) or getattr(user, "sub", None)
-
-
-class CurrentUser:
-    def __init__(self, id: str, email: Optional[str] = None, role: str = "user"):
-        self.id = id
-        self.email = email
-        self.role = role
-
-
-# Use HTTP Bearer security so FastAPI shows an "Authorize" button in Swagger UI
+"""
+Security and authentication utilities
+"""
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Security
+from gotrue.errors import AuthApiError
+from app.database import get_supabase
 
-_bearer_scheme = HTTPBearer(auto_error=False)
-
+security = HTTPBearer()
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Security(_bearer_scheme)
-) -> CurrentUser:
-    """Dependency that extracts a user from a Bearer Authorization header.
-
-    NOTE: This is a lightweight implementation for local development / tests.
-    It treats the Bearer token as a simple payload in the form `id` or `id:email:role`.
-    Using `HTTPBearer` here makes OpenAPI include the Bearer security scheme.
-    Replace with real token verification against Supabase or your auth provider for production.
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
-    if not credentials or not credentials.credentials:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization header missing or invalid")
-
+    Verify JWT token and get current user
+    FIXED: Properly extracts user_id as clean string
+    """
     token = credentials.credentials
-
-    uid = None
-    email = None
-    role = "user"
-
-    # If it looks like a JWT (three parts), try to read claims without verifying signature
+    supabase = get_supabase()
+    
     try:
-        if token.count('.') == 2:
-            from jose import jwt as jose_jwt
-            claims = jose_jwt.get_unverified_claims(token)
-            uid = claims.get("sub") or claims.get("user_id") or claims.get("id")
-            email = claims.get("email") or (claims.get("user_metadata") or {}).get("email")
-            role = claims.get("role") or role
+        # Get user from token
+        response = supabase.auth.get_user(token)
+        
+        if not response or not response.user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials"
+            )
+        
+        # IMPORTANT: Extract user object with clean UUID string
+        user = response.user
+        
+        # Debug logging (remove in production)
+        print(f"✓ User authenticated: {user.id}")
+        
+        return user
+        
+    except AuthApiError as e:
+        print(f"Auth error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+    except Exception as e:
+        print(f"Unexpected auth error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed"
+        )
 
-            # If the token was a JWT but didn't yield a user id, reject it explicitly
-            if not uid:
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="JWT token is missing 'sub' claim or user id")
-    except HTTPException:
-        # Re-raise HTTP errors we intentionally raised
-        raise
-    except Exception:
-        # If JWT parsing fails and token *looks* like a JWT, reject it explicitly
-        if token.count('.') == 2:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid JWT token")
-        uid = None
 
-    # Fallback: simple colon-separated token (dev format)
-    if not uid:
-        parts = token.split(":")
-        if not parts or not parts[0]:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format")
-        uid = parts[0]
-        email = email or (parts[1] if len(parts) > 1 else None)
-        role = parts[2] if len(parts) > 2 else role
-
-    # Final sanity check
-    if not uid:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not extract user id from token")
-
-    return CurrentUser(uid, email, role)
+def extract_user_id(user) -> str:
+    """
+    Extract user_id as clean UUID string
+    This fixes the Supabase filter parsing issue
+    """
+    # Get the raw ID
+    if hasattr(user, 'id'):
+        user_id = user.id
+    else:
+        user_id = user.get('id', '')
+    
+    # Convert to string and clean it
+    user_id_str = str(user_id).strip().lower()
+    
+    # Debug output
+    print(f"DEBUG extract_user_id: Input type={type(user_id)}, Input value={user_id}")
+    print(f"DEBUG extract_user_id: Output={user_id_str}, Length={len(user_id_str)}")
+    
+    # Validate UUID format (should be 36 characters with dashes)
+    if len(user_id_str) != 36 or user_id_str.count('-') != 4:
+        print(f"ERROR: Invalid UUID format: {user_id_str}")
+        raise ValueError(f"Invalid user_id format: {user_id_str} (length: {len(user_id_str)})")
+    
+    return user_id_str

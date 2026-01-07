@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.routers import auth, users
+from app.routers import organizer, admin
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -14,6 +15,11 @@ app = FastAPI(
     version=settings.VERSION,
     debug=settings.DEBUG
 )
+
+origins = [
+    "http://localhost:3000",   
+    "http://127.0.0.1:3000",
+]
 
 # CORS middleware
 app.add_middleware(
@@ -23,6 +29,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Temporary debugging middleware to log OPTIONS preflight requests
+from fastapi import Request
+
+@app.middleware("http")
+async def log_options_request(request: Request, call_next):
+    if request.method == "OPTIONS":
+        try:
+            headers = {k: v for k, v in request.headers.items()}
+            print("DEBUG OPTIONS request:", request.url.path, headers)
+        except Exception as e:
+            print("DEBUG: failed to log OPTIONS headers", e)
+    return await call_next(request)
 
 # Mount static files (package-relative so imports work from anywhere)
 from pathlib import Path
@@ -35,6 +54,8 @@ else:
 # Include routers
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(organizer.router)
+app.include_router(admin.router)
 
 # Root endpoint
 @app.get("/")
@@ -77,3 +98,4 @@ async def startup_event():
 async def shutdown_event():
     """Run on application shutdown"""
     print(f"✓ {settings.APP_NAME} shutting down")
+

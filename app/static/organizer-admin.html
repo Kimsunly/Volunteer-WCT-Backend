@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizer & Admin Panel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-bottom: 8px; }
+        h2 { color: #667eea; margin-bottom: 16px; font-size: 20px; }
+        
+        /* Forms */
+        .form-group { margin-bottom: 16px; }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        /* Buttons */
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        .btn:hover { background: #5568d3; }
+        .btn-success { background: #10b981; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        
+        /* Messages */
+        .message {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .message.success { background: #d1fae5; color: #065f46; }
+        .message.error { background: #fee2e2; color: #991b1b; }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6b7280;
+            border-bottom: 3px solid transparent;
+        }
+        .tab.active { color: #667eea; border-bottom-color: #667eea; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Application cards */
+        .app-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .app-card h4 { margin-bottom: 8px; color: #333; }
+        .app-card p { margin: 4px 0; font-size: 14px; color: #666; }
+        
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .badge-approved { background: #d1fae5; color: #065f46; }
+        .badge-rejected { background: #fee2e2; color: #991b1b; }
+        
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value { font-size: 32px; font-weight: bold; }
+        .stat-label { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+        
+        .hidden { display: none !important; }
+        .img-preview {
+            max-width: 200px;
+            margin-top: 8px;
+            border-radius: 6px;
+            border: 2px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login -->
+        <div id="loginSection" class="card">
+            <h1>🔐 Login</h1>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="loginEmail" placeholder="your@email.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="••••••••">
+            </div>
+            <button class="btn btn-success" onclick="login()">Login</button>
+        </div>
+
+        <!-- Main -->
+        <div id="mainSection" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1>Volunteer Platform</h1>
+                        <p id="userRole" style="color: #666; margin-top: 4px;">Loading...</p>
+                    </div>
+                    <button class="btn btn-danger" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <div id="message" class="message"></div>
+
+            <div class="card">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('user')">👤 User</button>
+                    <button class="tab" id="orgTab" onclick="switchTab('organizer')">🏢 Become Organizer</button>
+                    <button class="tab hidden" id="adminTab" onclick="switchTab('admin')">⚙️ Admin</button>
+                </div>
+
+                <!-- User Tab -->
+                <div id="userContent" class="tab-content active">
+                    <h2>User Dashboard</h2>
+                    <p>Welcome! You can apply to become an organizer.</p>
+                </div>
+
+                <!-- Organizer Tab -->
+                <div id="organizerContent" class="tab-content">
+                    <div id="appStatus" class="hidden"></div>
+                    
+                    <div id="appForm">
+                        <h2>Apply to Become an Organizer</h2>
+                        
+                        <div class="form-group">
+                            <label>Organization Name *</label>
+                            <input type="text" id="orgName" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" id="orgEmail" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Phone *</label>
+                            <input type="tel" id="orgPhone" placeholder="+855 12 345 678" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Password * (for new account or confirmation)</label>
+                            <input type="password" id="orgPassword" value="dummy123" required>
+                            <small style="color: #666;">This is just for form validation</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Organization Type *</label>
+                            <select id="orgType" required>
+                                <option value="">Select...</option>
+                                <option value="ngo">NGO</option>
+                                <option value="nonprofit">Non-Profit</option>
+                                <option value="community">Community Group</option>
+                                <option value="educational">Educational</option>
+                                <option value="religious">Religious</option>
+                                <option value="government">Government</option>
+                                <option value="corporate">Corporate</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Organization Card/Certificate</label>
+                            <input type="file" id="orgCard" accept="image/*">
+                            <img id="cardPreview" class="img-preview hidden" alt="Preview">
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="submitApplication()">Submit Application</button>
+                    </div>
+                </div>
+
+                <!-- Admin Tab -->
+                <div id="adminContent" class="tab-content">
+                    <h2>Admin Dashboard</h2>
+                    
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="statPending">0</div>
+                            <div class="stat-label">Pending</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statUsers">0</div>
+                            <div class="stat-label">Users</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statOrganizers">0</div>
+                            <div class="stat-label">Organizers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statAdmins">0</div>
+                            <div class="stat-label">Admins</div>
+                        </div>
+                    </div>
+
+                    <h2>Pending Applications</h2>
+                    <div id="appsList"></div>
+                    <button class="btn" onclick="loadApps()">🔄 Refresh</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        let token = null;
+        let role = null;
+        let appId = null;
+
+        function showMessage(text, type = 'success') {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 5000);
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if (tab === 'user') {
+                document.querySelector('.tab').classList.add('active');
+                document.getElementById('userContent').classList.add('active');
+            } else if (tab === 'organizer') {
+                document.getElementById('orgTab').classList.add('active');
+                document.getElementById('organizerContent').classList.add('active');
+                checkApp();
+            } else if (tab === 'admin') {
+                document.getElementById('adminTab').classList.add('active');
+                document.getElementById('adminContent').classList.add('active');
+                loadStats();
+                loadApps();
+            }
+        }
+
+        // File preview
+        document.getElementById('orgCard')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.getElementById('cardPreview');
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    token = result.session.access_token;
+                    await loadRole();
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('mainSection').classList.remove('hidden');
+                    showMessage('Login successful! 🎉', 'success');
+                } else {
+                    alert('Login failed: ' + result.detail);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function loadRole() {
+            try {
+                const response = await fetch(`${API_URL}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const profile = await response.json();
+                role = profile.role;
+                
+                document.getElementById('userRole').textContent = 
+                    `Role: ${role.toUpperCase()}`;
+
+                if (role === 'admin') {
+                    document.getElementById('adminTab').classList.remove('hidden');
+                }
+
+                if (role === 'organizer') {
+                    document.getElementById('orgTab').textContent = '🏢 My Organization';
+                }
+            } catch (error) {
+                console.error('Load role error:', error);
+            }
+        }
+
+        async function checkApp() {
+            if (!token) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/organizer/application/my`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+                
+                if (result.has_application) {
+                    const app = result.application;
+                    appId = app.id;
+                    
+                    document.getElementById('appStatus').classList.remove('hidden');
+                    document.getElementById('appForm').classList.add('hidden');
+                    
+                    let badge = '';
+                    if (app.status === 'pending') badge = 'badge-pending';
+                    else if (app.status === 'approved') badge = 'badge-approved';
+                    else if (app.status === 'rejected') badge = 'badge-rejected';
+                    
+                    document.getElementById('appStatus').innerHTML = `
+                        <div class="app-card">
+                            <h4>${app.organization_name}</h4>
+                            <p><strong>Status:</strong> <span class="badge ${badge}">${app.status.toUpperCase()}</span></p>
+                            <p><strong>Submitted:</strong> ${new Date(app.submitted_at).toLocaleString()}</p>
+                            ${app.status === 'rejected' && app.rejection_reason ? 
+                                `<p><strong>Reason:</strong> ${app.rejection_reason}</p>
+                                 <button class="btn" onclick="reapply()">Apply Again</button>` : ''}
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('appStatus').classList.add('hidden');
+                    document.getElementById('appForm').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Check app error:', error);
+            }
+        }
+
+        function reapply() {
+            document.getElementById('appStatus').classList.add('hidden');
+            document.getElementById('appForm').classList.remove('hidden');
+        }
+
+        async function submitApplication() {
+            if (!token) return;
+
+            const data = {
+                organization_name: document.getElementById('orgName').value,
+                email: document.getElementById('orgEmail').value,
+                phone: document.getElementById('orgPhone').value,
+                password: document.getElementById('orgPassword').value,
+                organizer_type: document.getElementById('orgType').value
+            };
+
+            if (!data.organization_name || !data.email || !data.phone || !data.organizer_type) {
+                alert('Please fill all required fields');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/organizer/apply`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    appId = result.application_id;
+                    
+                    // Upload card if provided
+                    const cardFile = document.getElementById('orgCard').files[0];
+                    if (cardFile) {
+                        await uploadCard(appId, cardFile);
+                    }
+                    
+                    showMessage('Application submitted! ✅', 'success');
+                    checkApp();
+                } else {
+                    showMessage('Error: ' + result.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function uploadCard(appId, file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                await fetch(`${API_URL}/api/organizer/application/${appId}/upload-card`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+            } catch (error) {
+                console.error('Upload error:', error);
+            }
+        }
+
+        async function loadStats() {
+            if (!token) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/admin/stats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const stats = await response.json();
+                
+                document.getElementById('statPending').textContent = stats.pending_applications;
+                document.getElementById('statUsers').textContent = stats.total_users;
+                document.getElementById('statOrganizers').textContent = stats.total_organizers;
+                document.getElementById('statAdmins').textContent = stats.total_admins;
+            } catch (error) {
+                console.error('Stats error:', error);
+            }
+        }
+
+        async function loadApps() {
+            if (!token) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/admin/applications/pending`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const apps = await response.json();
+                const list = document.getElementById('appsList');
+                
+                if (apps.length === 0) {
+                    list.innerHTML = '<p>No pending applications</p>';
+                    return;
+                }
+                
+                list.innerHTML = apps.map(app => `
+                    <div class="app-card">
+                        <h4>${app.organization_name}</h4>
+                        <p><strong>Type:</strong> ${app.organizer_type}</p>
+                        <p><strong>Email:</strong> ${app.email}</p>
+                        <p><strong>Phone:</strong> ${app.phone}</p>
+                        ${app.card_image_url ? `<p><a href="${app.card_image_url}" target="_blank">📄 View Card</a></p>` : ''}
+                        <p><strong>Submitted:</strong> ${new Date(app.submitted_at).toLocaleString()}</p>
+                        <div style="margin-top: 12px;">
+                            <button class="btn btn-success" onclick="approve(${app.id})">✓ Approve</button>
+                            <button class="btn btn-danger" onclick="reject(${app.id})">✗ Reject</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Load apps error:', error);
+            }
+        }
+
+        async function approve(appId) {
+            if (!confirm('Approve this application?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/admin/applications/${appId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(result.message, 'success');
+                    loadApps();
+                    loadStats();
+                } else {
+                    showMessage('Error: ' + result.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function reject(appId) {
+            const reason = prompt('Reason for rejection (optional):');
+            if (reason === null) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/admin/applications/${appId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reason: reason || null })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Application rejected', 'success');
+                    loadApps();
+                    loadStats();
+                } else {
+                    showMessage('Error: ' + result.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        function logout() {
+            token = null;
+            role = null;
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('mainSection').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

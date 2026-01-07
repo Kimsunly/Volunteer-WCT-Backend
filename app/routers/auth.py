@@ -83,6 +83,7 @@ async def login(credentials: UserLogin):
     """Login user"""
     supabase = get_supabase()
     print(f"DEBUG /api/auth/login called with email={credentials.email}")
+    print(f"DEBUG password received: {'*' * len(credentials.password) if credentials.password else 'None'}")
 
     try:
         # Sign in
@@ -94,6 +95,7 @@ async def login(credentials: UserLogin):
 
         if not auth_response.user or not auth_response.session:
             print("DEBUG: Auth response missing user or session")
+            print(f"DEBUG: user={auth_response.user}, session={auth_response.session}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
@@ -140,15 +142,36 @@ async def login(credentials: UserLogin):
         }
 
     except AuthApiError as e:
-        print(f"Login error: {e}")
+        # Extract more detailed error information
+        error_message = str(e)
+        error_detail = getattr(e, 'message', error_message)
+        error_status = getattr(e, 'status_code', None)
+        
+        print(f"Login error (AuthApiError): {error_message}")
+        print(f"Login error detail: {error_detail}")
+        print(f"Login error status: {error_status}")
+        print(f"Login error type: {type(e)}")
+        print(f"Login error attributes: {dir(e)}")
+        
+        # Check for specific error types
+        if "Invalid login credentials" in error_message or "Invalid credentials" in error_message:
+            detail_msg = "Invalid email or password. Please check your credentials and try again."
+        elif "Email not confirmed" in error_message or "not confirmed" in error_message.lower():
+            detail_msg = "Please confirm your email address before logging in."
+        else:
+            detail_msg = f"Authentication failed: {error_detail}"
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
+            detail=detail_msg
         )
     except HTTPException:
         raise
     except Exception as e:
         print(f"Unexpected login error: {e}")
+        print(f"Unexpected login error type: {type(e)}")
+        import traceback
+        print(f"Unexpected login error traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed. Please try again."
