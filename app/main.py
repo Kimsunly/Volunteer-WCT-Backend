@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.routers import auth, users
-from app.routers import organizer, admin
+from app.routers import organizer, admin, opportunity_with_images
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -56,6 +56,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(organizer.router)
 app.include_router(admin.router)
+app.include_router(opportunity_with_images.router)
 
 # Root endpoint
 @app.get("/")

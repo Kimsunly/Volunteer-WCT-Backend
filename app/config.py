@@ -31,8 +31,9 @@ class Settings:
     # File Upload
     MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB
     ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"]
-    # Storage buckets (override via AVATAR_BUCKET env var if your bucket is named differently, e.g. 'avatar')
+    # Storage buckets (override via env vars if your buckets are named differently)
     STORAGE_AVATAR_BUCKET = os.getenv("AVATAR_BUCKET", "avatars")
+    STORAGE_OPPORTUNITY_BUCKET = os.getenv("OPPORTUNITY_BUCKET", "opportunity-images")
     
     # Validation
     def validate(self):
