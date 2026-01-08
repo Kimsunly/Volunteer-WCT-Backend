@@ -1,9 +1,11 @@
 """
-Organizer registration routes - FIXED & SIMPLIFIED
+Organizer registration routes - WITH DIRECT ORGANIZER REGISTRATION
+Organizers can now register separately from regular users
 """
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from typing import Optional
 from datetime import datetime
+from gotrue.errors import AuthApiError
 
 from app.models.organizer import OrganizerRegister
 from app.utils.security import get_current_user, extract_user_id
@@ -12,14 +14,110 @@ from app.database import get_supabase
 router = APIRouter(prefix="/api/organizer", tags=["Organizer"])
 
 
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+async def register_as_organizer(application: OrganizerRegister):
+    """
+    NEW: Direct organizer registration
+    Organizers register with their own email/password, separate from regular users
+    They get 'organizer' role but status is 'pending' until admin approval
+    """
+    supabase = get_supabase()
+    
+    try:
+        # Step 1: Create auth user in Supabase
+        auth_response = supabase.auth.sign_up({
+            "email": application.email,
+            "password": application.password
+        })
+        
+        if not auth_response.user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Registration failed. Email may already be in use."
+            )
+        
+        user_id = extract_user_id(auth_response.user)
+        print(f"DEBUG: Created organizer auth user with ID: {user_id}")
+        
+        # Step 2: Create user profile with 'organizer' role
+        profile_data = {
+            "user_id": user_id,
+            "email": application.email,
+            "first_name": "",  # Can be updated later
+            "last_name": "",   # Can be updated later
+            "phone": application.phone,
+            "role": "organizer",  # Important: Set as organizer immediately
+            "status": "pending",  # But status is pending
+            "volunteer_level": "bronze",
+            "rating": 0.0,
+            "points": 0
+        }
+        
+        supabase.table("user_profiles").insert(profile_data).execute()
+        print(f"DEBUG: Created user profile with role='organizer', status='pending'")
+        
+        # Step 3: Create organizer application
+        application_data = {
+            "user_id": user_id,
+            "organization_name": application.organization_name,
+            "email": application.email,
+            "phone": application.phone,
+            "organizer_type": application.organizer_type.value,
+            "status": "pending"
+        }
+        
+        app_response = supabase.table("organizer_applications")\
+            .insert(application_data)\
+            .execute()
+        
+        if not app_response.data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to create application"
+            )
+        
+        print(f"DEBUG: Created organizer application with status='pending'")
+        
+        return {
+            "message": "Organizer registration successful! Please wait for admin approval before logging in.",
+            "user": {
+                "id": user_id,
+                "email": application.email,
+                "organization_name": application.organization_name
+            },
+            "application": {
+                "id": app_response.data[0]['id'],
+                "status": "pending"
+            },
+            "note": "You cannot login until an admin approves your application."
+        }
+        
+    except AuthApiError as e:
+        print(f"Supabase Auth Error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Registration failed: {str(e)}"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Registration error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Registration failed: {str(e)}"
+        )
+
+
 @router.post("/apply", status_code=status.HTTP_201_CREATED)
 async def apply_as_organizer(
     application: OrganizerRegister,
     current_user = Depends(get_current_user)
 ):
     """
-    Apply to become an organizer
-    Simplified - only essential fields
+    OLD: Existing users can apply to become organizers
+    This is for users who are already registered and want to upgrade to organizer
     """
     supabase = get_supabase()
     
@@ -68,7 +166,7 @@ async def apply_as_organizer(
         
         # Create new application
         application_data = {
-            "user_id": user_id,  # This should be a clean UUID string
+            "user_id": user_id,
             "organization_name": application.organization_name,
             "email": application.email,
             "phone": application.phone,
@@ -229,7 +327,7 @@ async def get_organizer_profile(current_user = Depends(get_current_user)):
     try:
         # Check role
         user_profile = supabase.table("user_profiles")\
-            .select("role")\
+            .select("role, status")\
             .match({"user_id": user_id})\
             .single()\
             .execute()
@@ -238,6 +336,12 @@ async def get_organizer_profile(current_user = Depends(get_current_user)):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not an organizer"
+            )
+        
+        if user_profile.data['status'] == 'pending':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your organizer application is still pending approval"
             )
         
         # Get organizer profile

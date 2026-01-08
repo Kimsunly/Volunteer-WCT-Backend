@@ -1,5 +1,6 @@
 """
-Authentication routes
+Authentication routes - IMPROVED ORGANIZER APPROVAL CHECK
+Handles all cases: pending, approved, rejected, and missing applications
 """
 from fastapi import APIRouter, HTTPException, status, Depends
 from gotrue.errors import AuthApiError
@@ -80,34 +81,42 @@ async def register(user_data: UserRegister):
 
 @router.post("/login")
 async def login(credentials: UserLogin):
-    """Login user"""
+    """
+    Login user - WITH COMPLETE ORGANIZER APPROVAL CHECK
+    
+    Flow:
+    1. Regular users (role='user') → Login allowed ✅
+    2. Admins (role='admin') → Login allowed ✅
+    3. Organizers (role='organizer') → Check application status:
+       - If approved → Login allowed ✅
+       - If pending → Login BLOCKED ❌ "Wait for approval"
+       - If rejected → Login BLOCKED ❌ "Application rejected"
+       - If no application → Login BLOCKED ❌ "No application found"
+    """
     supabase = get_supabase()
     print(f"DEBUG /api/auth/login called with email={credentials.email}")
-    print(f"DEBUG password received: {'*' * len(credentials.password) if credentials.password else 'None'}")
 
     try:
-        # Sign in
+        # Step 1: Authenticate with Supabase
         auth_response = supabase.auth.sign_in_with_password({
             "email": credentials.email,
             "password": credentials.password
         })
-        print(f"DEBUG sign_in_with_password returned: {getattr(auth_response, '__dict__', str(auth_response))}")
 
         if not auth_response.user or not auth_response.session:
-            print("DEBUG: Auth response missing user or session")
-            print(f"DEBUG: user={auth_response.user}, session={auth_response.session}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
             )
 
-        # Extract clean user_id
         user_id = extract_user_id(auth_response.user)
+        print(f"DEBUG: Authentication successful for user_id={user_id}")
 
-        # Check/create profile
+        # Step 2: Get or create user profile
+        user_profile = None
         try:
             profile_check = supabase.table("user_profiles")\
-                .select("id")\
+                .select("*")\
                 .eq("user_id", user_id)\
                 .execute()
 
@@ -124,16 +133,91 @@ async def login(credentials: UserLogin):
                     "rating": 0.0,
                     "points": 0
                 }
-                supabase.table("user_profiles").insert(profile_data).execute()
+                created = supabase.table("user_profiles").insert(profile_data).execute()
+                user_profile = created.data[0] if created.data else None
+            else:
+                user_profile = profile_check.data[0]
+                
         except Exception as profile_error:
             print(f"Profile check/create error: {profile_error}")
+            # Continue without profile for now
 
-        print(f"DEBUG: login success for user_id={user_id}")
+        # Step 3: Check if user has organizer role
+        user_role = user_profile.get('role') if user_profile else 'user'
+        user_status = user_profile.get('status') if user_profile else 'active'
+        print(f"DEBUG: User role = {user_role}, status = {user_status}")
+
+        # ==========================================
+        # 🔒 ORGANIZER APPROVAL CHECK
+        # ==========================================
+        if user_role == 'organizer':
+            print(f"DEBUG: User has 'organizer' role - verifying approval status...")
+            
+            # Quick check: if status is 'pending' or 'rejected', block immediately
+            if user_status == 'pending':
+                supabase.auth.sign_out()
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="⏳ Your organizer application is pending admin approval. Please wait for approval before logging in."
+                )
+            elif user_status == 'rejected':
+                supabase.auth.sign_out()
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="❌ Your organizer application was rejected. Please contact support."
+                )
+            
+            # Additional check: Verify in application table as backup
+            try:
+                # Check organizer application status
+                app_check = supabase.table("organizer_applications")\
+                    .select("status, organization_name, rejection_reason")\
+                    .eq("user_id", user_id)\
+                    .execute()
+                
+                # Case 1: No application found
+                if not app_check.data:
+                    print(f"WARNING: User has 'organizer' role but no application found!")
+                    # Don't block - they might be a legacy organizer
+                
+                else:
+                    application = app_check.data[0]
+                    app_status = application['status']
+                    print(f"DEBUG: Application status from DB = {app_status}")
+                
+                # If status is 'active', allow login
+                if user_status == 'active':
+                    print(f"✅ Organizer status is 'active' - login allowed")
+                    # Continue to successful login below
+                
+            except HTTPException:
+                # Re-raise our custom HTTP exceptions
+                raise
+            except Exception as check_error:
+                print(f"ERROR checking organizer approval: {check_error}")
+                import traceback
+                traceback.print_exc()
+                supabase.auth.sign_out()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Error verifying organizer status. Please try again or contact support."
+                )
+        
+        # ==========================================
+        # END ORGANIZER APPROVAL CHECK
+        # ==========================================
+
+        # Step 4: Successful login - return tokens and user info
+        print(f"✅ Login successful for user_id={user_id}, role={user_role}")
+        
         return {
             "message": "Login successful",
             "user": {
                 "id": user_id,
-                "email": auth_response.user.email
+                "email": auth_response.user.email,
+                "role": user_role,
+                "first_name": user_profile.get('first_name') if user_profile else "",
+                "last_name": user_profile.get('last_name') if user_profile else ""
             },
             "session": {
                 "access_token": auth_response.session.access_token,
@@ -142,39 +226,34 @@ async def login(credentials: UserLogin):
         }
 
     except AuthApiError as e:
-        # Extract more detailed error information
+        # Supabase authentication errors
         error_message = str(e)
-        error_detail = getattr(e, 'message', error_message)
-        error_status = getattr(e, 'status_code', None)
-        
         print(f"Login error (AuthApiError): {error_message}")
-        print(f"Login error detail: {error_detail}")
-        print(f"Login error status: {error_status}")
-        print(f"Login error type: {type(e)}")
-        print(f"Login error attributes: {dir(e)}")
         
-        # Check for specific error types
         if "Invalid login credentials" in error_message or "Invalid credentials" in error_message:
-            detail_msg = "Invalid email or password. Please check your credentials and try again."
+            detail_msg = "Invalid email or password. Please check your credentials."
         elif "Email not confirmed" in error_message or "not confirmed" in error_message.lower():
             detail_msg = "Please confirm your email address before logging in."
         else:
-            detail_msg = f"Authentication failed: {error_detail}"
+            detail_msg = f"Authentication failed: {error_message}"
         
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=detail_msg
         )
+    
     except HTTPException:
+        # Re-raise HTTP exceptions (including organizer approval errors)
         raise
+    
     except Exception as e:
+        # Unexpected errors
         print(f"Unexpected login error: {e}")
-        print(f"Unexpected login error type: {type(e)}")
         import traceback
-        print(f"Unexpected login error traceback: {traceback.format_exc()}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Login failed. Please try again."
+            detail="Login failed. Please try again later."
         )
 
 
@@ -193,12 +272,59 @@ async def logout(current_user = Depends(get_current_user)):
 
 @router.get("/me")
 async def get_current_user_info(current_user = Depends(get_current_user)):
-    """Get current user info"""
-    return {
-        "id": str(current_user.id),
-        "email": current_user.email,
-        "role": current_user.role if hasattr(current_user, 'role') else 'user'
-    }
+    """Get current authenticated user information"""
+    supabase = get_supabase()
+    user_id = extract_user_id(current_user)
+    
+    try:
+        # Get full user profile
+        profile = supabase.table("user_profiles")\
+            .select("*")\
+            .eq("user_id", user_id)\
+            .single()\
+            .execute()
+        
+        if profile.data:
+            user_data = profile.data
+            response = {
+                "id": user_id,
+                "email": user_data.get('email'),
+                "first_name": user_data.get('first_name'),
+                "last_name": user_data.get('last_name'),
+                "role": user_data.get('role'),
+                "status": user_data.get('status'),
+                "phone": user_data.get('phone')
+            }
+            
+            # If organizer, include application status
+            if user_data.get('role') == 'organizer':
+                try:
+                    app = supabase.table("organizer_applications")\
+                        .select("status, organization_name")\
+                        .eq("user_id", user_id)\
+                        .single()\
+                        .execute()
+                    
+                    if app.data:
+                        response['organizer_status'] = app.data['status']
+                        response['organization_name'] = app.data['organization_name']
+                except:
+                    pass
+            
+            return response
+        else:
+            return {
+                "id": user_id,
+                "email": current_user.email,
+                "role": 'user'
+            }
+    except Exception as e:
+        print(f"Get user info error: {e}")
+        return {
+            "id": user_id,
+            "email": current_user.email if hasattr(current_user, 'email') else None,
+            "role": current_user.role if hasattr(current_user, 'role') else 'user'
+        }
 
 
 # --- Development helper endpoints (local only) ---
