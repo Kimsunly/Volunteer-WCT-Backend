@@ -1,5 +1,5 @@
 """
-Admin routes - FIXED & SIMPLIFIED
+Admin routes - UPDATED for new organizer registration flow
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Optional
@@ -118,7 +118,7 @@ async def get_application_detail(
         
         # Get user info
         user_response = supabase.table("user_profiles")\
-            .select("email, first_name, last_name, created_at")\
+            .select("email, first_name, last_name, created_at, role, status")\
             .match({"user_id": application['user_id']})\
             .single()\
             .execute()
@@ -143,7 +143,10 @@ async def approve_application(
     application_id: int,
     current_user = Depends(require_admin)
 ):
-    """Approve organizer application"""
+    """
+    Approve organizer application
+    UPDATED: Now properly changes status from 'pending' to 'active'
+    """
     supabase = get_supabase()
     admin_id = extract_user_id(current_user)
     
@@ -169,7 +172,7 @@ async def approve_application(
                 detail=f"Cannot approve {application['status']} application"
             )
         
-        # Update application
+        # Update application status to 'approved'
         supabase.table("organizer_applications")\
             .update({
                 "status": "approved",
@@ -179,14 +182,23 @@ async def approve_application(
             .match({"id": application_id})\
             .execute()
         
-        # Update user role
+        # Update user profile: role stays 'organizer', but status changes to 'active'
         supabase.table("user_profiles")\
-            .update({"role": "organizer"})\
+            .update({
+                "role": "organizer",
+                "status": "active"  # IMPORTANT: Change from 'pending' to 'active'
+            })\
             .match({"user_id": application['user_id']})\
             .execute()
         
-        # Create organizer profile
-        organizer_profile = {
+        # Create or update organizer profile
+        # Check if profile already exists
+        existing_profile = supabase.table("organizer_profiles")\
+            .select("id")\
+            .eq("user_id", application['user_id'])\
+            .execute()
+        
+        organizer_profile_data = {
             "user_id": application['user_id'],
             "organization_name": application['organization_name'],
             "organizer_type": application['organizer_type'],
@@ -195,7 +207,17 @@ async def approve_application(
             "verified_at": datetime.utcnow().isoformat()
         }
         
-        supabase.table("organizer_profiles").insert(organizer_profile).execute()
+        if existing_profile.data:
+            # Update existing profile
+            supabase.table("organizer_profiles")\
+                .update(organizer_profile_data)\
+                .eq("user_id", application['user_id'])\
+                .execute()
+        else:
+            # Insert new profile
+            supabase.table("organizer_profiles")\
+                .insert(organizer_profile_data)\
+                .execute()
         
         # Log action
         log_admin_action(
@@ -206,14 +228,17 @@ async def approve_application(
         )
         
         return {
-            "message": f"✅ {application['organization_name']} approved!",
-            "application_id": application_id
+            "message": f"✅ {application['organization_name']} approved! They can now login.",
+            "application_id": application_id,
+            "organization_name": application['organization_name']
         }
         
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
         print(f"Approve error: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to approve: {str(e)}"
@@ -226,7 +251,10 @@ async def reject_application(
     action: ApplicationAction,
     current_user = Depends(require_admin)
 ):
-    """Reject organizer application"""
+    """
+    Reject organizer application
+    UPDATED: Now properly handles rejection
+    """
     supabase = get_supabase()
     admin_id = extract_user_id(current_user)
     
@@ -252,7 +280,7 @@ async def reject_application(
                 detail=f"Cannot reject {application['status']} application"
             )
         
-        # Update application
+        # Update application status to 'rejected'
         supabase.table("organizer_applications")\
             .update({
                 "status": "rejected",
@@ -261,6 +289,16 @@ async def reject_application(
                 "rejection_reason": action.reason
             })\
             .match({"id": application_id})\
+            .execute()
+        
+        # Update user profile: status stays 'pending' (they're still blocked)
+        # OR you can change role back to 'user' if you want them to use app as regular user
+        supabase.table("user_profiles")\
+            .update({
+                "status": "rejected"  # Keep them blocked
+                # OR: "role": "user", "status": "active"  # Let them be regular user
+            })\
+            .match({"user_id": application['user_id']})\
             .execute()
         
         # Log action
@@ -273,7 +311,8 @@ async def reject_application(
         
         return {
             "message": "Application rejected",
-            "application_id": application_id
+            "application_id": application_id,
+            "reason": action.reason
         }
         
     except HTTPException:
