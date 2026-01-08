@@ -2,29 +2,9 @@
 Configuration settings for the application
 """
 import os
-from pathlib import Path
+from dotenv import load_dotenv
 
-# Get the base directory (project root)
-BASE_DIR = Path(__file__).resolve().parent.parent
-dotenv_path = BASE_DIR / '.env'
-
-# Manually read and parse .env file
-def load_env_file(filepath):
-    """Manually load environment variables from .env file"""
-    env_vars = {}
-    if filepath.exists():
-        with open(filepath, 'r', encoding='utf-8-sig') as f:  # utf-8-sig strips BOM automatically
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
-                    key = key.strip()
-                    value = value.strip()
-                    env_vars[key] = value
-    return env_vars
-
-# Load environment variables
-env_vars = load_env_file(dotenv_path)
+load_dotenv()
 
 class Settings:
     # App Settings
@@ -32,9 +12,9 @@ class Settings:
     VERSION = "1.0.0"
     DEBUG = os.getenv("DEBUG", "False").lower() == "true"
     
-    # Supabase Settings - Use env_vars directly first, fallback to os.getenv
-    SUPABASE_URL = env_vars.get("SUPABASE_URL") or os.getenv("SUPABASE_URL")
-    SUPABASE_KEY = env_vars.get("SUPABASE_KEY") or os.getenv("SUPABASE_KEY")
+    # Supabase Settings
+    SUPABASE_URL = os.getenv("SUPABASE_URL", "https://hyidxiytjwxknerdrpua.supabase.co")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5aWR4aXl0and4a25lcmRycHVhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzUzNzg3MCwiZXhwIjoyMDgzMTEzODcwfQ.Fm1yVH9ZOJ-sGbegEbik8hZYYFnl9HJOBXpZo5GFuDk")
     
     # Security
     JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
@@ -45,21 +25,23 @@ class Settings:
     ALLOWED_ORIGINS = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+  
     ]
     
     # File Upload
     MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB
     ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    # Storage buckets (override via env vars if your buckets are named differently)
     STORAGE_AVATAR_BUCKET = os.getenv("AVATAR_BUCKET", "avatars")
+    STORAGE_OPPORTUNITY_BUCKET = os.getenv("OPPORTUNITY_BUCKET", "opportunity-images")
     
     # Validation
     def validate(self):
         """Validate required settings"""
         if not self.SUPABASE_URL:
-            raise ValueError("SUPABASE_URL is required in .env file")
+            raise ValueError("SUPABASE_URL is required")
         if not self.SUPABASE_KEY:
-            raise ValueError("SUPABASE_KEY is required in .env file")
+            raise ValueError("SUPABASE_KEY is required")
         return True
 
 settings = Settings()
-settings.validate()

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Image Upload - Opportunity</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .file-input {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            text-align: center;
+            background: white;
+        }
+        .preview {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .preview img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .token-section {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Test Image Upload - Opportunities</h1>
+        
+        <!-- Token Section -->
+        <div class="token-section">
+            <label for="token">🔑 JWT Token (from login):</label>
+            <input type="text" id="token" placeholder="Paste your JWT token here...">
+            <small>Login at <a href="/static/test-backend.html" target="_blank">/static/test-backend.html</a> to get a token</small>
+        </div>
+
+        <!-- Create Opportunity with Images -->
+        <div class="section">
+            <h2>📝 Create Opportunity with Images</h2>
+            
+            <label for="title">Title *</label>
+            <input type="text" id="title" value="Beach Cleanup Volunteer Event" required>
+            
+            <label for="category_label">Category Label *</label>
+            <input type="text" id="category_label" value="Environment">
+            
+            <label for="location_label">Location Label *</label>
+            <input type="text" id="location_label" value="Sihanoukville">
+            
+            <label for="description">Description</label>
+            <textarea id="description">Join us for a beach cleanup event to help protect our ocean and marine life.</textarea>
+            
+            <label for="organization">Organization</label>
+            <input type="text" id="organization" value="Green Cambodia">
+            
+            <label for="date_range">Date</label>
+            <input type="date" id="date_range" value="2026-02-15" placeholder="YYYY-MM-DD">
+            
+            <label for="time_range">Time</label>
+            <input type="time" id="time_range" value="08:00">
+            
+            <label for="capacity">Capacity</label>
+            <input type="number" id="capacity" value="50">
+            
+            <label for="transport">Transport</label>
+            <input type="text" id="transport" value="Bus provided from Phnom Penh">
+            
+            <label for="housing">Housing</label>
+            <input type="text" id="housing" value="Not provided">
+            
+            <label for="meals">Meals</label>
+            <input type="text" id="meals" value="Lunch and water provided">
+            
+            <label>Images (max 5, up to 5MB each)</label>
+            <div class="file-input">
+                <input type="file" id="images" multiple accept="image/*" title="Select images to upload" onchange="previewImages(this)">
+                <p>📸 Click to select images or drag and drop</p>
+            </div>
+            <div id="preview" class="preview"></div>
+            
+            <button onclick="createWithImages()" id="createBtn">Create Opportunity</button>
+        </div>
+
+        <!-- Upload Images to Existing -->
+        <div class="section">
+            <h2>📤 Upload Images to Existing Opportunity</h2>
+            
+            <label for="opportunity_id">Opportunity ID</label>
+            <input type="text" id="opportunity_id" placeholder="Paste opportunity ID here...">
+            
+            <label>Additional Images (max 5)</label>
+            <div class="file-input">
+                <input type="file" id="additional_images" multiple accept="image/*" title="Select additional images" onchange="previewAdditionalImages(this)">
+                <p>📸 Click to select images</p>
+            </div>
+            <div id="additional_preview" class="preview"></div>
+            
+            <button onclick="uploadImages()" id="uploadBtn">Upload Images</button>
+        </div>
+
+        <!-- Result Display -->
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        function getToken() {
+            const token = document.getElementById('token').value.trim();
+            if (!token) {
+                showResult('Please enter your JWT token', 'error');
+                return null;
+            }
+            return token;
+        }
+
+        function previewImages(input) {
+            const preview = document.getElementById('preview');
+            preview.innerHTML = '';
+            
+            if (input.files) {
+                Array.from(input.files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        preview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
+        function previewAdditionalImages(input) {
+            const preview = document.getElementById('additional_preview');
+            preview.innerHTML = '';
+            
+            if (input.files) {
+                Array.from(input.files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        preview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
+        async function createWithImages() {
+            const token = getToken();
+            if (!token) return;
+
+            const btn = document.getElementById('createBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            try {
+                const formData = new FormData();
+                
+                // Add text fields
+                formData.append('title', document.getElementById('title').value);
+                formData.append('category_label', document.getElementById('category_label').value);
+                formData.append('location_label', document.getElementById('location_label').value);
+                formData.append('description', document.getElementById('description').value);
+                formData.append('organization', document.getElementById('organization').value);
+                formData.append('date_range', document.getElementById('date_range').value);
+                formData.append('time_range', document.getElementById('time_range').value);
+                formData.append('capacity', document.getElementById('capacity').value);
+                formData.append('transport', document.getElementById('transport').value);
+                formData.append('housing', document.getElementById('housing').value);
+                formData.append('meals', document.getElementById('meals').value);
+                
+                // Add images
+                const images = document.getElementById('images').files;
+                if (images.length > 5) {
+                    showResult('Maximum 5 images allowed', 'error');
+                    return;
+                }
+                
+                for (let i = 0; i < images.length; i++) {
+                    formData.append('images', images[i]);
+                }
+
+                const response = await fetch(`${API_BASE}/api/opportunities/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult(JSON.stringify(data, null, 2), 'success');
+                    // Save opportunity ID for later use
+                    document.getElementById('opportunity_id').value = data.id;
+                } else {
+                    showResult(`Error: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Request failed: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Opportunity';
+            }
+        }
+
+        async function uploadImages() {
+            const token = getToken();
+            if (!token) return;
+
+            const opportunityId = document.getElementById('opportunity_id').value.trim();
+            if (!opportunityId) {
+                showResult('Please enter an opportunity ID', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            btn.textContent = 'Uploading...';
+
+            try {
+                const formData = new FormData();
+                const images = document.getElementById('additional_images').files;
+                
+                if (images.length === 0) {
+                    showResult('Please select at least one image', 'error');
+                    return;
+                }
+                
+                if (images.length > 5) {
+                    showResult('Maximum 5 images allowed', 'error');
+                    return;
+                }
+                
+                for (let i = 0; i < images.length; i++) {
+                    formData.append('images', images[i]);
+                }
+
+                const response = await fetch(`${API_BASE}/api/opportunities/${opportunityId}/upload-images`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult(JSON.stringify(data, null, 2), 'success');
+                } else {
+                    showResult(`Error: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Request failed: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Upload Images';
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Show info message on load
+        window.onload = () => {
+            showResult('Ready to test image uploads! First, get your JWT token by logging in.', 'info');
+        };
+    </script>
+</body>
+</html>
