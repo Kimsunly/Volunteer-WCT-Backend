@@ -118,16 +118,47 @@ async def create_opportunity(
             "meals": payload.meals,
         }
 
-        # Insert into opportunities table
-        result = supabase.table("opportunities").insert(data).execute()
+        # Insert into opportunities table.
+        # Important: PostgREST can return only what it gets back from the insert.
+        # If the API is configured to not return inserted rows, `id` may be missing,
+        # which breaks our OpportunityResponse response model.
+        insert_result = supabase.table("opportunities").insert(data).execute()
 
-        if not result.data:
+        if not insert_result.data:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create opportunity"
             )
 
-        return result.data[0]
+        inserted = insert_result.data[0]
+
+        # If `id` is present, we are done.
+        if inserted.get("id") is not None:
+            return inserted
+
+        # Otherwise fetch the newly inserted row.
+        # We can't rely on a unique combination of business fields, so we grab the
+        # latest row for this organizer that matches title (and created_at ordering).
+        fetched = (
+            supabase.table("opportunities")
+            .select("*")
+            .eq("organizer_id", organizer_id)
+            .eq("title", payload.title)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+
+        if not fetched.data:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=(
+                    "Opportunity was created but could not be fetched with its id. "
+                    "Check your PostgREST/Supabase settings and RLS policies for the opportunities table."
+                ),
+            )
+
+        return fetched.data[0]
 
     except HTTPException:
         raise

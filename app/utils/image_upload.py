@@ -158,6 +158,12 @@ async def upload_multiple_opportunity_images(
     Raises:
         HTTPException: If upload fails
     """
+    if not files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No images provided"
+        )
+
     if len(files) > max_files:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -165,19 +171,29 @@ async def upload_multiple_opportunity_images(
         )
     
     urls = []
+    errors: List[str] = []
     for file in files:
         try:
             url = await upload_opportunity_image(file, organizer_id)
             urls.append(url)
         except HTTPException as e:
             # If one file fails, continue with others but track the error
-            print(f"Failed to upload {file.filename}: {e.detail}")
+            err = f"{file.filename or 'unknown'}: {e.detail}"
+            print(f"Failed to upload {err}")
+            errors.append(err)
             continue
     
     if not urls:
+        # This usually means: wrong bucket name, bucket missing, bucket not public,
+        # RLS/policies blocking storage, or invalid file types.
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to upload any images"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": "Failed to upload any images",
+                "bucket": BUCKET_NAME,
+                "errors": errors or ["Unknown error"],
+                "hint": "Check Supabase Storage bucket exists and permissions allow uploads."
+            }
         )
     
     return urls

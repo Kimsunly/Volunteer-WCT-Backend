@@ -63,7 +63,9 @@ class OpportunityUpdate(BaseModel):
 class OpportunityResponse(BaseModel):
     """Response model for an opportunity"""
     
-    id: str  # UUID from Supabase
+    # In this project the opportunities table uses an integer primary key.
+    # (If you later migrate to UUIDs, adjust this back to `str`.)
+    id: int
     organizer_id: int  # Foreign key to organizer_profiles.id
     title: str
     category_label: str

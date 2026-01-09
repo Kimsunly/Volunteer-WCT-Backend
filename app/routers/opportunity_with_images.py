@@ -129,23 +129,54 @@ async def create_opportunity(
             "images": image_urls_to_string(image_urls) if image_urls else None,
             "description": description,
             "organization": organization,
-            "date_range": parsed_date,
-            "time_range": parsed_time,
+            # Supabase client sends JSON; native date/time objects aren't JSON serializable.
+            # Store as ISO strings (compatible with Postgres date/time columns too).
+            "date_range": parsed_date.isoformat() if parsed_date else None,
+            "time_range": parsed_time.isoformat() if parsed_time else None,
             "capacity": capacity,
             "transport": transport,
             "housing": housing,
             "meals": meals,
         }
 
-        result = supabase.table("opportunities").insert(data).execute()
+        # The Supabase python client sometimes returns only a subset of columns on insert
+        # (depending on PostgREST configuration / return representation). Our
+        # OpportunityResponse requires `id`, so we fetch the inserted row explicitly.
+        insert_result = supabase.table("opportunities").insert(data).execute()
 
-        if not result.data:
+        if not insert_result.data:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create opportunity"
             )
 
-        return result.data[0]
+        inserted = insert_result.data[0]
+        inserted_id = inserted.get("id")
+        if not inserted_id:
+            # Fall back to selecting the most recent row for this organizer/title.
+            # (Not perfect, but better than a response validation crash.)
+            latest = (
+                supabase.table("opportunities")
+                .select("*")
+                .eq("organizer_id", organizer_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if latest.data:
+                return latest.data[0]
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Opportunity created but could not retrieve record id"
+            )
+
+        full_row = supabase.table("opportunities").select("*").eq("id", inserted_id).single().execute()
+        if full_row.data:
+            return full_row.data
+
+        # As a last resort return what we have
+        return inserted
 
     except HTTPException:
         raise

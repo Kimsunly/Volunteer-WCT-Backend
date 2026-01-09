@@ -5,13 +5,139 @@ Organizers can now register separately from regular users
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from typing import Optional
 from datetime import datetime
+from enum import Enum
 from gotrue.errors import AuthApiError
 
 from app.models.organizer import OrganizerRegister
+from app.models.user import UserLogin
 from app.utils.security import get_current_user, extract_user_id
 from app.database import get_supabase
 
 router = APIRouter(prefix="/api/organizer", tags=["Organizer"])
+
+
+class OrganizerType(str, Enum):
+    NGO = "ngo"
+    NONPROFIT = "nonprofit"
+    BUSINESS = "business"
+    COMMUNITY_GROUP = "community_group"
+    OTHER = "other"
+    NEW = "new"    # <-- add this if you want to accept "new"
+
+
+@router.post("/login")
+async def organizer_login(credentials: UserLogin):
+    """Organizer-only login.
+
+    This is a convenience endpoint so Swagger shows a login button under the
+    Organizer section. It uses the same Supabase Auth user as normal login, but
+    it blocks login unless the user is an approved organizer.
+
+    Rules:
+    - Must have an organizer application with status='approved' OR have an active
+      organizer profile.
+    """
+    supabase = get_supabase()
+
+    try:
+        auth_response = supabase.auth.sign_in_with_password({
+            "email": credentials.email,
+            "password": credentials.password,
+        })
+
+        if not auth_response.user or not auth_response.session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password",
+            )
+
+        user_id = extract_user_id(auth_response.user)
+
+        # Prefer checking organizer_profiles (source of truth for "verified organizer")
+        organizer_profile = supabase.table("organizer_profiles") \
+            .select("id, is_active, verified_at") \
+            .eq("user_id", user_id) \
+            .execute()
+
+        if organizer_profile.data:
+            profile = organizer_profile.data[0]
+            if not profile.get("is_active", True):
+                supabase.auth.sign_out()
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Your organizer account is not active.",
+                )
+            if profile.get("verified_at") is None:
+                supabase.auth.sign_out()
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Your organizer account is pending verification.",
+                )
+
+            return {
+                "message": "Organizer login successful",
+                "user": {
+                    "id": user_id,
+                    "email": auth_response.user.email,
+                    "role": "organizer",
+                },
+                "session": {
+                    "access_token": auth_response.session.access_token,
+                    "refresh_token": auth_response.session.refresh_token,
+                },
+            }
+
+        # Fallback: check organizer application status
+        app_check = supabase.table("organizer_applications") \
+            .select("status") \
+            .eq("user_id", user_id) \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+
+        if not app_check.data:
+            supabase.auth.sign_out()
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No organizer application found for this account.",
+            )
+
+        status_value = app_check.data[0].get("status")
+        if status_value != "approved":
+            supabase.auth.sign_out()
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Organizer login not allowed. Application status is '{status_value}'.",
+            )
+
+        return {
+            "message": "Organizer login successful",
+            "user": {
+                "id": user_id,
+                "email": auth_response.user.email,
+                "role": "organizer",
+            },
+            "session": {
+                "access_token": auth_response.session.access_token,
+                "refresh_token": auth_response.session.refresh_token,
+            },
+        }
+
+    except AuthApiError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication failed: {str(e)}",
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print(f"Organizer login error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Organizer login failed. Please try again later.",
+        )
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -39,22 +165,24 @@ async def register_as_organizer(application: OrganizerRegister):
         user_id = extract_user_id(auth_response.user)
         print(f"DEBUG: Created organizer auth user with ID: {user_id}")
         
-        # Step 2: Create user profile with 'organizer' role
+        # Step 2: Create user profile as a regular user so they can login immediately
+        # Their organizer application will remain 'pending' until admin approval
         profile_data = {
             "user_id": user_id,
             "email": application.email,
             "first_name": "",  # Can be updated later
             "last_name": "",   # Can be updated later
             "phone": application.phone,
-            "role": "organizer",  # Important: Set as organizer immediately
-            "status": "pending",  # But status is pending
+            # Keep them as a regular user so they can login and use non-organizer features
+            "role": "user",
+            "status": "active",
             "volunteer_level": "bronze",
             "rating": 0.0,
             "points": 0
         }
-        
+
         supabase.table("user_profiles").insert(profile_data).execute()
-        print(f"DEBUG: Created user profile with role='organizer', status='pending'")
+        print(f"DEBUG: Created user profile with role='user', status='active' (organizer application pending)")
         
         # Step 3: Create organizer application
         application_data = {
@@ -79,7 +207,7 @@ async def register_as_organizer(application: OrganizerRegister):
         print(f"DEBUG: Created organizer application with status='pending'")
         
         return {
-            "message": "Organizer registration successful! Please wait for admin approval before logging in.",
+            "message": "Organizer registration successful! You can login now. Organizer features will be enabled after admin approval.",
             "user": {
                 "id": user_id,
                 "email": application.email,
@@ -89,7 +217,7 @@ async def register_as_organizer(application: OrganizerRegister):
                 "id": app_response.data[0]['id'],
                 "status": "pending"
             },
-            "note": "You cannot login until an admin approves your application."
+            "note": "You can use the platform as a regular user. Admin will promote you to organizer when they approve your application."
         }
         
     except AuthApiError as e:

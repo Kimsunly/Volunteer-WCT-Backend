@@ -166,6 +166,17 @@ async def approve_application(
         
         application = app_response.data
         
+        # Make approve idempotent:
+        # - pending   -> approve and promote to organizer
+        # - approved  -> return OK (already approved)
+        # - rejected  -> block (needs a new application)
+        if application['status'] == 'approved':
+            return {
+                "message": f"ℹ️  {application['organization_name']} is already approved.",
+                "application_id": application_id,
+                "organization_name": application['organization_name'],
+                "status": "approved"
+            }
         if application['status'] != 'pending':
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -192,12 +203,6 @@ async def approve_application(
             .execute()
         
         # Create or update organizer profile
-        # Check if profile already exists
-        existing_profile = supabase.table("organizer_profiles")\
-            .select("id")\
-            .eq("user_id", application['user_id'])\
-            .execute()
-        
         organizer_profile_data = {
             "user_id": application['user_id'],
             "organization_name": application['organization_name'],
@@ -206,18 +211,48 @@ async def approve_application(
             "card_image_url": application.get('card_image_url'),
             "verified_at": datetime.utcnow().isoformat()
         }
-        
-        if existing_profile.data:
-            # Update existing profile
-            supabase.table("organizer_profiles")\
-                .update(organizer_profile_data)\
-                .eq("user_id", application['user_id'])\
+
+        # NOTE: Supabase python client will silently return an empty .data list if RLS blocks the insert
+        # or if the table structure/constraints reject it. So we explicitly validate the response.
+        organizer_profile_result = None
+        try:
+            existing_profile = (
+                supabase.table("organizer_profiles")
+                .select("id")
+                .eq("user_id", application['user_id'])
                 .execute()
-        else:
-            # Insert new profile
-            supabase.table("organizer_profiles")\
-                .insert(organizer_profile_data)\
-                .execute()
+            )
+
+            if existing_profile.data:
+                organizer_profile_result = (
+                    supabase.table("organizer_profiles")
+                    .update(organizer_profile_data)
+                    .eq("user_id", application['user_id'])
+                    .execute()
+                )
+            else:
+                organizer_profile_result = (
+                    supabase.table("organizer_profiles")
+                    .insert(organizer_profile_data)
+                    .execute()
+                )
+
+            if not organizer_profile_result.data:
+                # Provide a clearer explanation for the most common real-world causes.
+                raise Exception(
+                    "organizer_profiles write returned no data. "
+                    "Most likely causes: (1) Row Level Security (RLS) blocked the insert/update, "
+                    "(2) the service key is not being used, (3) table constraints rejected the row, "
+                    "or (4) the table/columns differ from expected schema."
+                )
+        except Exception as profile_error:
+            # At this point the application is approved + role updated, but profile creation failed.
+            # We surface a useful message so you can fix RLS/schema and re-run approve safely.
+            print(f"ERROR creating organizer_profiles row for user_id={application['user_id']}: {profile_error}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Application approved, but failed to create organizer profile: {profile_error}"
+            )
         
         # Log action
         log_admin_action(
@@ -228,9 +263,10 @@ async def approve_application(
         )
         
         return {
-            "message": f"✅ {application['organization_name']} approved! They can now login.",
+            "message": f"✅ {application['organization_name']} approved! Organizer features are now enabled.",
             "application_id": application_id,
-            "organization_name": application['organization_name']
+            "organization_name": application['organization_name'],
+            "status": "approved"
         }
         
     except HTTPException:
