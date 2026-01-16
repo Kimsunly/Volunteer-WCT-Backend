@@ -17,7 +17,8 @@ class Settings:
     SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5aWR4aXl0and4a25lcmRycHVhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzUzNzg3MCwiZXhwIjoyMDgzMTEzODcwfQ.Fm1yVH9ZOJ-sGbegEbik8hZYYFnl9HJOBXpZo5GFuDk")
     
     # Security
-    JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
+    # Support both JWT_SECRET and SUPABASE_JWT_SECRET for convenience
+    JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("SUPABASE_JWT_SECRET") or "your-secret-key-change-in-production"
     JWT_ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
     
