@@ -44,7 +44,7 @@ def generate_unique_filename(original_filename: str) -> str:
     return f"{timestamp}_{unique_id}_{clean_name}{ext}"
 
 
-async def upload_opportunity_image(
+def upload_opportunity_image(
     file: UploadFile,
     organizer_id: int
 ) -> str:
@@ -78,7 +78,7 @@ async def upload_opportunity_image(
     
     # Read file content
     try:
-        file_content = await file.read()
+        file_content = file.file.read()
         file_size = len(file_content)
         
         if file_size > MAX_FILE_SIZE:
@@ -139,7 +139,7 @@ async def upload_opportunity_image(
         )
 
 
-async def upload_multiple_opportunity_images(
+def upload_multiple_opportunity_images(
     files: List[UploadFile],
     organizer_id: int,
     max_files: int = 5
@@ -174,7 +174,7 @@ async def upload_multiple_opportunity_images(
     errors: List[str] = []
     for file in files:
         try:
-            url = await upload_opportunity_image(file, organizer_id)
+            url = upload_opportunity_image(file, organizer_id)
             urls.append(url)
         except HTTPException as e:
             # If one file fails, continue with others but track the error
@@ -199,7 +199,7 @@ async def upload_multiple_opportunity_images(
     return urls
 
 
-async def delete_opportunity_image(image_url: str) -> bool:
+def delete_opportunity_image(image_url: str) -> bool:
     """
     Delete an image from Supabase Storage.
     
@@ -230,7 +230,7 @@ async def delete_opportunity_image(image_url: str) -> bool:
         return False
 
 
-async def delete_multiple_images(image_urls: List[str]) -> int:
+def delete_multiple_images(image_urls: List[str]) -> int:
     """
     Delete multiple images.
     
@@ -242,7 +242,7 @@ async def delete_multiple_images(image_urls: List[str]) -> int:
     """
     deleted_count = 0
     for url in image_urls:
-        if await delete_opportunity_image(url):
+        if delete_opportunity_image(url):
             deleted_count += 1
     
     return deleted_count
@@ -281,7 +281,7 @@ def image_urls_to_string(urls: List[str]) -> str:
         Comma-separated string
     """
 
-async def upload_user_cv(
+def upload_user_cv(
     file: UploadFile,
     user_id: str
 ) -> str:
@@ -303,7 +303,7 @@ async def upload_user_cv(
     file_path = f"{user_id}/{unique_filename}"
     
     try:
-        content = await file.read()
+        content = file.file.read()
         
         # Upload
         supabase.storage.from_(bucket_name).upload(

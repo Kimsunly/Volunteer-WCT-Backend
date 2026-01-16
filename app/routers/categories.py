@@ -5,7 +5,7 @@ from app.models.admin import CategoryResponse
 
 router = APIRouter(prefix="/api/categories", tags=["Categories"])
 
-@router.get("/", response_model=List[CategoryResponse])
+@router.get("", response_model=List[CategoryResponse])
 def list_public_categories():
     """
     GET /api/categories

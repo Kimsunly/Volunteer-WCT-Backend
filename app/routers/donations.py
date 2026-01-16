@@ -6,8 +6,8 @@ from datetime import datetime
 
 router = APIRouter(prefix="/api/donations", tags=["Donations"])
 
-@router.post("/", response_model=DonationResponse, status_code=status.HTTP_201_CREATED)
-async def create_donation(donation: DonationCreate):
+@router.post("", response_model=DonationResponse, status_code=status.HTTP_201_CREATED)
+def create_donation(donation: DonationCreate):
     """
     Submit a new donation
     """
@@ -37,7 +37,7 @@ async def create_donation(donation: DonationCreate):
 from app.models.blood_donation import BloodDonationCreate, BloodDonationResponse
 
 @router.post("/blood", response_model=BloodDonationResponse, status_code=status.HTTP_201_CREATED)
-async def register_blood_donation(donation: BloodDonationCreate):
+def register_blood_donation(donation: BloodDonationCreate):
     """
     Register for blood donation
     """

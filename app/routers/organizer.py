@@ -26,7 +26,7 @@ class OrganizerType(str, Enum):
 
 
 @router.post("/login")
-async def organizer_login(credentials: UserLogin):
+def organizer_login(credentials: UserLogin):
     """Organizer-only login.
 
     This is a convenience endpoint so Swagger shows a login button under the

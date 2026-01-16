@@ -26,13 +26,13 @@ router = APIRouter(prefix="/api/applications", tags=["Applications"])
 # ==============================================================================
 
 @router.post(
-    "/",
+    "",
     response_model=ApplicationResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Apply to an opportunity",
     description="Submit an application to a volunteer opportunity."
 )
-async def create_application(
+def create_application(
     payload: ApplicationCreate,
     current_user=Depends(get_current_user)
 ):
@@ -133,7 +133,7 @@ async def create_application(
         )
 
 
-async def _create_application_core(supabase, payload: dict, user_id: str):
+def _create_application_core(supabase, payload: dict, user_id: str):
     """Core logic to validate and insert an application record.
 
     Accepts a payload dict with keys matching the applications table columns.
@@ -227,7 +227,7 @@ async def _create_application_core(supabase, payload: dict, user_id: str):
     summary="Apply to an opportunity (multipart/form-data)",
     description="Submit an application to a volunteer opportunity with optional CV upload in one request."
 )
-async def create_application_multipart(
+def create_application_multipart(
     opportunity_id: int = Form(...),
     name: str = Form(...),
     skills: str = Form(...),
@@ -247,7 +247,7 @@ async def create_application_multipart(
     try:
         cv_url = None
         if file and file.filename:
-            cv_url = await upload_user_cv(file, user_id)
+            cv_url = upload_user_cv(file, user_id)
 
         payload = {
             "opportunity_id": opportunity_id,
@@ -262,7 +262,7 @@ async def create_application_multipart(
             "cv_url": cv_url,
         }
 
-        created = await _create_application_core(supabase, payload, user_id)
+        created = _create_application_core(supabase, payload, user_id)
         return created
 
     except HTTPException:
@@ -281,7 +281,7 @@ async def create_application_multipart(
     summary="Upload CV",
     description="Upload a CV (PDF/DOCX/TXT) and receive a public URL to include in application",
 )
-async def upload_cv(
+def upload_cv(
     file: UploadFile = File(...),
     current_user=Depends(get_current_user)
 ):
@@ -290,7 +290,7 @@ async def upload_cv(
     user = current_user
     try:
         user_id = extract_user_id(user)
-        url = await upload_user_cv(file, user_id)
+        url = upload_user_cv(file, user_id)
         return {"cv_url": url}
 
     except HTTPException:
@@ -362,7 +362,7 @@ def get_my_applications(
     summary="Get application by ID",
     description="Get a specific application. User can only view their own applications."
 )
-async def get_application(
+def get_application(
     application_id: int,
     current_user=Depends(get_current_user)
 ):

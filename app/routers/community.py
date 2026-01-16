@@ -110,7 +110,7 @@ def get_organizer_or_admin_profile(current_user = Depends(get_current_user)):
         )
 
 
-@router.get("/", response_model=List[CommunityPostResponse])
+@router.get("", response_model=List[CommunityPostResponse])
 def list_community_posts(
     category: Optional[str] = None,
     limit: int = Query(50, ge=1, le=100),

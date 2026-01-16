@@ -6,8 +6,8 @@ from datetime import datetime
 
 router = APIRouter(prefix="/api/contact", tags=["Contact"])
 
-@router.post("/", response_model=ContactMessageResponse, status_code=status.HTTP_201_CREATED)
-async def submit_contact_message(message: ContactMessageCreate):
+@router.post("", response_model=ContactMessageResponse, status_code=status.HTTP_201_CREATED)
+def submit_contact_message(message: ContactMessageCreate):
     """
     Submit a contact message
     """

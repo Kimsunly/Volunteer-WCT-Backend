@@ -123,7 +123,7 @@ def get_comments_for_entity(
         raise HTTPException(status_code=500, detail=f"Failed to fetch comments: {str(e)}")
 
 
-@router.post("/", response_model=CommentResponse, status_code=201)
+@router.post("", response_model=CommentResponse, status_code=201)
 def create_comment(
     comment: CommentCreate,
     current_user = Depends(get_current_user)

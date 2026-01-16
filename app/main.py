@@ -14,8 +14,7 @@ from app.routers import categories, blogs, community, comments, donations, conta
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
-    debug=settings.DEBUG,
-    redirect_slashes=False  # Prevent 307 redirects for missing trailing slashes
+    debug=settings.DEBUG
 )
 
 # CORS middleware

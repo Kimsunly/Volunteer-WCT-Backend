@@ -17,11 +17,11 @@ router = APIRouter(prefix="/api/opportunities", tags=["Opportunities"])
 
 
 @router.get(
-    "/",
+    "",
     response_model=OpportunityListResponse,
     summary="List opportunities (public)"
 )
-async def list_opportunities(
+def list_opportunities(
     q: Optional[str] = None,
     category: Optional[str] = None,
     page: int = 1,
@@ -152,13 +152,13 @@ async def get_organizer_profile(current_user = Depends(get_current_user)):
 
 
 @router.post(
-    "/",
+    "",
     response_model=OpportunityResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create opportunity (with images)",
     description="Create an opportunity and upload images in one request"
 )
-async def create_opportunity(
+def create_opportunity(
     title: str = Form(...),
     category_label: str = Form(...),
     location_label: str = Form(...),
@@ -235,7 +235,7 @@ async def create_opportunity(
         image_urls = []
         # Check if any images provided (images list is not empty and first item has filename)
         if images and len(images) > 0 and images[0].filename:
-            image_urls = await upload_multiple_opportunity_images(images, organizer_id, max_files=5)
+            image_urls = upload_multiple_opportunity_images(images, organizer_id, max_files=5)
 
         data = {
             "organizer_id": organizer_id,
@@ -316,7 +316,7 @@ async def create_opportunity(
     response_model=OpportunityListResponse,
     summary="Get my opportunities"
 )
-async def get_my_opportunities(
+def get_my_opportunities(
     limit: int = 50,
     offset: int = 0,
     organizer_profile: dict = Depends(get_organizer_profile)
@@ -357,7 +357,7 @@ async def get_my_opportunities(
     response_model=OpportunityResponse,
     summary="Get opportunity by ID"
 )
-async def get_opportunity(opportunity_id: str):
+def get_opportunity(opportunity_id: str):
     """Get a single opportunity by ID."""
     supabase = get_supabase()
 
@@ -387,7 +387,7 @@ async def get_opportunity(opportunity_id: str):
     response_model=OpportunityResponse,
     summary="Update opportunity"
 )
-async def update_opportunity(
+def update_opportunity(
     opportunity_id: str,
     payload: OpportunityUpdate,
     organizer_profile: dict = Depends(get_organizer_profile)
@@ -462,7 +462,7 @@ async def update_opportunity(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete opportunity"
 )
-async def delete_opportunity(
+def delete_opportunity(
     opportunity_id: str,
     organizer_profile: dict = Depends(get_organizer_profile)
 ):
@@ -488,7 +488,7 @@ async def delete_opportunity(
         # Delete images from storage
         image_urls = get_image_urls_from_string(existing.data[0].get("images"))
         for url in image_urls:
-            await delete_opportunity_image(url)
+            delete_opportunity_image(url)
 
         # Delete opportunity
         supabase.table("opportunities").delete().eq("id", opportunity_id).execute()

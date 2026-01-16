@@ -5,7 +5,7 @@ from app.models.admin import BlogResponse
 
 router = APIRouter(prefix="/api/blogs", tags=["Blogs"])
 
-@router.get("/", response_model=List[BlogResponse])
+@router.get("", response_model=List[BlogResponse])
 def list_public_blogs(
     category: Optional[str] = Query(None, description="Filter by category"),
     q: Optional[str] = Query(None, description="Search query")
