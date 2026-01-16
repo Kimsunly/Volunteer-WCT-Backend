@@ -141,7 +141,7 @@ def organizer_login(credentials: UserLogin):
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register_as_organizer(application: OrganizerRegister):
+def register_as_organizer(application: OrganizerRegister):
     """
     NEW: Direct organizer registration
     Organizers register with their own email/password, separate from regular users
@@ -239,7 +239,7 @@ async def register_as_organizer(application: OrganizerRegister):
 
 
 @router.post("/apply", status_code=status.HTTP_201_CREATED)
-async def apply_as_organizer(
+def apply_as_organizer(
     application: OrganizerRegister,
     current_user = Depends(get_current_user)
 ):
@@ -336,7 +336,7 @@ async def apply_as_organizer(
 
 
 @router.post("/application/{application_id}/upload-card")
-async def upload_organization_card(
+def upload_organization_card(
     application_id: int,
     file: UploadFile = File(...),
     current_user = Depends(get_current_user)
@@ -416,7 +416,7 @@ async def upload_organization_card(
 
 
 @router.get("/application/my")
-async def get_my_application(current_user = Depends(get_current_user)):
+def get_my_application(current_user = Depends(get_current_user)):
     """Get current user's application status"""
     supabase = get_supabase()
     user_id = extract_user_id(current_user)
@@ -447,7 +447,7 @@ async def get_my_application(current_user = Depends(get_current_user)):
 
 
 @router.get("/profile")
-async def get_organizer_profile(current_user = Depends(get_current_user)):
+def get_organizer_profile_endpoint(current_user = Depends(get_current_user)):
     """Get organizer profile (only for approved organizers)"""
     supabase = get_supabase()
     user_id = extract_user_id(current_user)
@@ -493,7 +493,7 @@ async def get_organizer_profile(current_user = Depends(get_current_user)):
         print(f"Get profile error: {e}")
 
 @router.get("/dashboard")
-async def get_organizer_dashboard(current_user = Depends(get_current_user)):
+def get_organizer_dashboard(current_user = Depends(get_current_user)):
     """Get organizer dashboard statistics"""
     supabase = get_supabase()
     user_id = extract_user_id(current_user)

@@ -430,7 +430,7 @@ def get_application(
     summary="Withdraw application",
     description="Withdraw a pending application. Only the applicant can withdraw."
 )
-async def withdraw_application(
+def withdraw_application(
     application_id: int,
     current_user=Depends(get_current_user)
 ):
@@ -493,7 +493,7 @@ async def withdraw_application(
     summary="Get applications for opportunity (Organizer)",
     description="Get all applications for a specific opportunity. Only the organizer who created the opportunity can view."
 )
-async def get_applications_for_opportunity(
+def get_applications_for_opportunity(
     opportunity_id: int,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -568,7 +568,7 @@ async def get_applications_for_opportunity(
     summary="Update application status (Organizer)",
     description="Approve or reject an application. Only the organizer of the opportunity can update."
 )
-async def update_application_status(
+def update_application_status(
     application_id: int,
     payload: ApplicationUpdate,
     current_user=Depends(get_current_user)
@@ -670,7 +670,7 @@ async def update_application_status(
     summary="Get application stats (Organizer)",
     description="Get application statistics for an opportunity."
 )
-async def get_application_stats(
+def get_application_stats(
     opportunity_id: int,
     current_user=Depends(get_current_user)
 ):
@@ -749,7 +749,7 @@ async def get_application_stats(
     summary="Get all applications for my opportunities (Organizer)",
     description="Get all applications across all opportunities owned by the current organizer."
 )
-async def get_my_organizer_applications(
+def get_my_organizer_applications(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     status_filter: Optional[ApplicationStatus] = Query(None, alias="status"),

@@ -96,7 +96,7 @@ def get_profile(current_user = Depends(get_current_user)):
 
 
 @router.put("/profile")
-async def update_profile(
+def update_profile(
     profile_data: UserProfileUpdate,
     current_user = Depends(get_current_user)
 ):
@@ -213,7 +213,7 @@ async def update_profile(
 
 
 @router.post("/avatar")
-async def upload_avatar(
+def upload_avatar(
     file: UploadFile = File(...),
     current_user = Depends(get_current_user)
 ):
@@ -235,7 +235,7 @@ async def upload_avatar(
             )
         
         # Validate file size
-        file_content = await file.read()
+        file_content = file.file.read()
         if len(file_content) > 5 * 1024 * 1024:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -302,7 +302,7 @@ async def upload_avatar(
 
 
 @router.delete("/avatar")
-async def delete_avatar(current_user = Depends(get_current_user)):
+def delete_avatar(current_user = Depends(get_current_user)):
     """Delete user avatar"""
     supabase = get_supabase()
     

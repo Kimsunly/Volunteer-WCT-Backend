@@ -329,14 +329,14 @@ def get_current_user_info(current_user = Depends(get_current_user)):
 
 # --- Development helper endpoints (local only) ---
 @router.get("/debug/ping")
-async def debug_ping():
+def debug_ping():
     """Simple ping to verify server is up and responding"""
     print("DEBUG /api/auth/debug/ping received")
     return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
 
 
 @router.post("/debug/echo")
-async def debug_echo(payload: dict):
+def debug_echo(payload: dict):
     """Echo posted JSON back to the client (useful for debugging request bodies)"""
     print(f"DEBUG /api/auth/debug/echo payload: {payload}")
     return {"received": payload}

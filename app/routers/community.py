@@ -180,7 +180,7 @@ def list_community_posts(
 
 
 @router.get("/my", response_model=List[CommunityPostResponse])
-async def list_my_posts(
+def list_my_posts(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     organizer_profile: dict = Depends(get_organizer_profile)
@@ -221,8 +221,8 @@ async def list_my_posts(
         )
 
 
-@router.post("/", response_model=CommunityPostResponse, status_code=status.HTTP_201_CREATED)
-async def create_community_post(
+@router.post("", response_model=CommunityPostResponse, status_code=status.HTTP_201_CREATED)
+def create_community_post(
     post: CommunityPostCreate,
     organizer_profile: dict = Depends(get_organizer_or_admin_profile)
 ):
@@ -263,7 +263,7 @@ async def create_community_post(
 
 
 @router.put("/{post_id}", response_model=CommunityPostResponse)
-async def update_community_post(
+def update_community_post(
     post_id: str,
     post_update: CommunityPostUpdate,
     organizer_profile: dict = Depends(get_organizer_or_admin_profile)
@@ -320,7 +320,7 @@ async def update_community_post(
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_community_post(
+def delete_community_post(
     post_id: str,
     organizer_profile: dict = Depends(get_organizer_or_admin_profile)
 ):
@@ -363,7 +363,7 @@ async def delete_community_post(
 
 
 @router.post("/{post_id}/like")
-async def like_post(post_id: str):
+def like_post(post_id: str):
     """
     Like a community post
     """

@@ -412,19 +412,15 @@ def update_opportunity(
             )
 
         # Handle access key hashing if it's being updated
-        if payload.is_private and payload.access_key:
-             from app.utils.security import hash_secret
-             payload.access_key = None # Don't store plain text
-             # We need to inject access_key_hash into update_data manually
-             # but strictly speaking we'd need a field on the model or stick it in the dict
-             pass 
+        update_data = payload.model_dump(exclude_unset=True) 
 
-        update_data = payload.model_dump(exclude_unset=True) # exclude_unset is safer than exclude_none for partial updates
-
-        # Handle password hashing
         if "access_key" in update_data and update_data["access_key"]:
             from app.utils.security import hash_secret
             update_data["access_key_hash"] = hash_secret(update_data.pop("access_key"))
+        elif "access_key" in update_data:
+            # If access_key was passed as empty/null, clear the hash? 
+            # Usually only if is_private is being turned off or key is being cleared.
+            update_data.pop("access_key")
         
         # If skills/tasks are None/null in DB but present here, supabase handles list->json
         
