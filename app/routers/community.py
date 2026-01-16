@@ -155,11 +155,14 @@ def list_community_posts(
             # Flatten organizer name from user_profiles if that worked
             if item.get("organizer") and isinstance(item["organizer"], dict):
                 org = item["organizer"]
-                item["organizer_name"] = f"{org.get('first_name', '')} {org.get('last_name', '')}".strip() or "Verified User"
+                first = org.get('first_name') or ""
+                last = org.get('last_name') or ""
+                name = f"{first} {last}".strip()
+                item["organizer_name"] = name if name else "Verified Volunteer"
             
             # Ensure organizer_name exists even if join failed
             if not item.get("organizer_name"):
-                item["organizer_name"] = "អង្គការស្ម័គ្រចិត្ត" # Default name
+                item["organizer_name"] = "Verified Volunteer"
             
             # Map comments_count to comments to match CommunityPostResponse model
             if "comments_count" in item:

@@ -14,14 +14,18 @@ from app.routers import categories, blogs, community, comments, donations, conta
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
-    debug=settings.DEBUG
+    debug=settings.DEBUG,
+    redirect_slashes=False  # Prevent 307 redirects for missing trailing slashes
 )
 
 # CORS middleware
+# Note: allow_credentials=True is incompatible with allow_origins=["*"]
+# We handle this by setting allow_credentials based on the origins list
+allow_all = "*" in settings.ALLOWED_ORIGINS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=not allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
