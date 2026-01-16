@@ -11,7 +11,7 @@ from app.database import get_supabase
 
 security = HTTPBearer()
 
-async def get_current_user(
+def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
     """
@@ -23,8 +23,8 @@ async def get_current_user(
     
     try:
         # Get user from token
-        # Run blocking Supabase call in a thread to unblock event loop
-        response = await asyncio.to_thread(supabase.auth.get_user, token)
+        # Using synchronous call because FastAPI runs 'def' dependencies in a thread pool
+        response = supabase.auth.get_user(token)
         
         if not response or not response.user:
             raise HTTPException(
@@ -34,9 +34,6 @@ async def get_current_user(
         
         # IMPORTANT: Extract user object with clean UUID string
         user = response.user
-        
-        # Debug logging (remove in production)
-        print(f"✓ User authenticated: {user.id}")
         
         return user
         
@@ -55,18 +52,17 @@ async def get_current_user(
 
 
 
-async def get_current_user_optional(
+def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ):
     """
     Get current user if authenticated, else return None
-    Useful for endpoints that can be accessed publicly but show more info to logged-in users
     """
     if not credentials:
         return None
         
     try:
-        return await get_current_user(credentials)
+        return get_current_user(credentials)
     except HTTPException:
         return None
 

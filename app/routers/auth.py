@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserRegister):
+def register(user_data: UserRegister):
     """Register new user"""
     supabase = get_supabase()
     
@@ -80,7 +80,7 @@ async def register(user_data: UserRegister):
 
 
 @router.post("/login")
-async def login(credentials: UserLogin):
+def login(credentials: UserLogin):
     """
     Login user - WITH COMPLETE ORGANIZER APPROVAL CHECK
     
@@ -258,7 +258,7 @@ async def login(credentials: UserLogin):
 
 
 @router.post("/logout")
-async def logout(current_user = Depends(get_current_user)):
+def logout(current_user = Depends(get_current_user)):
     """Logout user"""
     supabase = get_supabase()
     
@@ -271,7 +271,7 @@ async def logout(current_user = Depends(get_current_user)):
 
 
 @router.get("/me")
-async def get_current_user_info(current_user = Depends(get_current_user)):
+def get_current_user_info(current_user = Depends(get_current_user)):
     """Get current authenticated user information"""
     supabase = get_supabase()
     user_id = extract_user_id(current_user)

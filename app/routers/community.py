@@ -14,7 +14,7 @@ from datetime import datetime
 router = APIRouter(prefix="/api/community", tags=["Community"])
 
 
-async def get_organizer_profile(current_user = Depends(get_current_user)):
+def get_organizer_profile(current_user = Depends(get_current_user)):
     """
     Get the organizer profile for the current user.
     Raises 403 if user is not an organizer.
@@ -58,7 +58,7 @@ async def get_organizer_profile(current_user = Depends(get_current_user)):
         )
 
 
-async def get_organizer_or_admin_profile(current_user = Depends(get_current_user)):
+def get_organizer_or_admin_profile(current_user = Depends(get_current_user)):
     """
     Get profile for organizer OR admin.
     Returns organizer profile with is_admin flag.
@@ -111,7 +111,7 @@ async def get_organizer_or_admin_profile(current_user = Depends(get_current_user
 
 
 @router.get("/", response_model=List[CommunityPostResponse])
-async def list_community_posts(
+def list_community_posts(
     category: Optional[str] = None,
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0)
@@ -125,7 +125,7 @@ async def list_community_posts(
         # If this fails (e.g. relationship not defined in Supabase), we fallback to simple select
         try:
             query = supabase.table("community_posts")\
-                .select("*, organizer:organizer_profiles(organization_name)")\
+                .select("*, organizer:user_profiles(first_name, last_name)")\
                 .eq("status", "approved")\
                 .order("created_at", desc=True)
             
@@ -152,8 +152,10 @@ async def list_community_posts(
         # Process and flatten data
         for item in data:
             # Flatten organizer name
+            # Flatten organizer name from user_profiles if that worked
             if item.get("organizer") and isinstance(item["organizer"], dict):
-                item["organizer_name"] = item["organizer"].get("organization_name")
+                org = item["organizer"]
+                item["organizer_name"] = f"{org.get('first_name', '')} {org.get('last_name', '')}".strip() or "Verified User"
             
             # Ensure organizer_name exists even if join failed
             if not item.get("organizer_name"):
