@@ -17,7 +17,7 @@ class OpportunityCreate(BaseModel):
     description: Optional[str] = Field(None, description="Brief description of the opportunity")
     organization: Optional[str] = Field(None, description="Organization name")
     date_range: Optional[date] = Field(None, description="Date of the opportunity")
-    time_range: Optional[time] = Field(None, description="Start time of the opportunity")
+    time_range: Optional[str] = Field(None, description="Time range (e.g. 8am - 5pm)")
     capacity: Optional[int] = Field(None, ge=0, description="Maximum number of volunteers")
     transport: Optional[str] = Field(None, description="Transportation information")
     housing: Optional[str] = Field(None, description="Housing information")
@@ -33,7 +33,7 @@ class OpportunityCreate(BaseModel):
                 "description": "Join us for a beach cleanup event",
                 "organization": "Green Earth Cambodia",
                 "date_range": "2024-03-15",
-                "time_range": "09:00:00",
+                "time_range": "09:00 AM - 05:00 PM",
                 "capacity": 50,
                 "transport": "Bus provided from city center",
                 "housing": "Not provided",
@@ -53,11 +53,18 @@ class OpportunityUpdate(BaseModel):
     description: Optional[str] = None
     organization: Optional[str] = None
     date_range: Optional[date] = None
-    time_range: Optional[time] = None
+    time_range: Optional[str] = None
     capacity: Optional[int] = Field(None, ge=0)
     transport: Optional[str] = None
     housing: Optional[str] = None
     meals: Optional[str] = None
+    # Add missing fields
+    skills: Optional[list[str]] = None
+    tasks: Optional[list[str]] = None
+    impact_description: Optional[str] = None
+    is_private: Optional[bool] = None
+    access_key: Optional[str] = None
+    status: Optional[str] = None # Added status field
 
 
 class OpportunityResponse(BaseModel):
@@ -74,7 +81,7 @@ class OpportunityResponse(BaseModel):
     description: Optional[str] = None
     organization: Optional[str] = None
     date_range: Optional[date] = None
-    time_range: Optional[time] = None
+    time_range: Optional[str] = None
     capacity: Optional[int] = None
     transport: Optional[str] = None
     housing: Optional[str] = None

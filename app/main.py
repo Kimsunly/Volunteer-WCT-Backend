@@ -7,7 +7,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.routers import auth, users
-from app.routers import organizer, admin, opportunity_with_images
+from app.routers import organizer, admin_comprehensive, opportunity_with_images
+from app.routers import categories, blogs, community, comments, donations, contact, applications
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -55,8 +56,15 @@ else:
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(organizer.router)
-app.include_router(admin.router)
+app.include_router(admin_comprehensive.router)  # Use comprehensive admin router
 app.include_router(opportunity_with_images.router)
+app.include_router(categories.router)
+app.include_router(blogs.router)
+app.include_router(community.router)
+app.include_router(comments.router)
+app.include_router(donations.router)
+app.include_router(contact.router)
+app.include_router(applications.router)
 
 # Root endpoint
 @app.get("/")

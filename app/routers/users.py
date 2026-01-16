@@ -12,6 +12,7 @@ from app.models.user import (
     UserStats,
     ProfileCompleteness
 )
+from app.models.opportunity import OpportunityResponse
 from app.utils.security import get_current_user, extract_user_id
 from app.database import get_supabase
 from app.config import settings
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/api/user", tags=["User Profile"])
 
 
 @router.get("/profile")
-async def get_profile(current_user = Depends(get_current_user)):
+def get_profile(current_user = Depends(get_current_user)):
     """Get current user profile - PROPERLY FIXED"""
     supabase = get_supabase()
     
@@ -355,7 +356,7 @@ async def delete_avatar(current_user = Depends(get_current_user)):
 
 
 @router.get("/stats", response_model=UserStats)
-async def get_user_stats(current_user = Depends(get_current_user)):
+def get_user_stats(current_user = Depends(get_current_user)):
     """Get user statistics"""
     supabase = get_supabase()
     user_id = extract_user_id(current_user)
@@ -407,7 +408,7 @@ async def get_user_stats(current_user = Depends(get_current_user)):
 
 
 @router.get("/profile/complete", response_model=ProfileCompleteness)
-async def get_profile_completeness(current_user = Depends(get_current_user)):
+def get_profile_completeness(current_user = Depends(get_current_user)):
     """Get profile completion percentage"""
     supabase = get_supabase()
     user_id = extract_user_id(current_user)
@@ -458,4 +459,31 @@ async def get_profile_completeness(current_user = Depends(get_current_user)):
             total_fields=12,
             missing_fields=[],
             is_complete=False
+        )
+
+
+@router.get("/recommendations", summary="Get recommended activities")
+def get_recommendations(current_user = Depends(get_current_user)):
+    """Get recommended activities for the user based on their skills/interests."""
+    supabase = get_supabase()
+    # user_id = extract_user_id(current_user) # We might use this for personalization later
+    
+    try:
+        # For now, return latest active opportunities as recommendations
+        # In a real app, this would use ML or matching logic based on user profile
+        response = supabase.table("opportunities")\
+            .select("*, organizer:organizer_id(organization_name)")\
+            .eq("status", "active")\
+            .eq("visibility", "public")\
+            .order("created_at", desc=True)\
+            .limit(6)\
+            .execute()
+            
+        return response.data or []
+        
+    except Exception as e:
+        print(f"Get recommendations error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get recommendations: {str(e)}"
         )

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Organizer Registration & Login Flow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #0066cc;
+            margin-top: 0;
+        }
+        input, select, button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0052a3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Organizer Registration & Login Flow</h1>
+    
+    <div class="info">
+        <strong>Testing Instructions:</strong>
+        <ol>
+            <li><strong>Step 1:</strong> Register a new organizer</li>
+            <li><strong>Step 2:</strong> Login with same email (should work as regular user)</li>
+            <li><strong>Step 3:</strong> Admin approves the application</li>
+            <li><strong>Step 4:</strong> Login again (should now be organizer)</li>
+        </ol>
+    </div>
+
+    <!-- Step 1: Register Organizer -->
+    <div class="section">
+        <h2>Step 1: Register Organizer</h2>
+        <input type="text" id="reg-orgname" placeholder="Organization Name" value="Test Organization">
+        <input type="email" id="reg-email" placeholder="Email" value="testorg@example.com">
+        <input type="tel" id="reg-phone" placeholder="Phone" value="+855123456789">
+        <input type="password" id="reg-password" placeholder="Password" value="password123">
+        <select id="reg-type">
+            <option value="ngo">NGO</option>
+            <option value="nonprofit">Non-Profit</option>
+            <option value="community">Community</option>
+            <option value="educational">Educational</option>
+        </select>
+        <button onclick="registerOrganizer()">Register Organizer</button>
+        <div id="reg-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Step 2: Login as User -->
+    <div class="section">
+        <h2>Step 2: Login (Before Approval)</h2>
+        <p style="color: #666;">Login with the same email - should work as regular user</p>
+        <input type="email" id="login1-email" placeholder="Email" value="testorg@example.com">
+        <input type="password" id="login1-password" placeholder="Password" value="password123">
+        <button onclick="loginUser('login1')">Login</button>
+        <div id="login1-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Step 3: Admin Approval -->
+    <div class="section">
+        <h2>Step 3: Admin Approves Application</h2>
+        <p style="color: #666;">Admin needs to approve the organizer application</p>
+        <input type="text" id="admin-app-id" placeholder="Application ID (from Step 1 response)">
+        <input type="text" id="admin-token" placeholder="Admin Access Token">
+        <button onclick="approveApplication()">Approve Application</button>
+        <div id="admin-result" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Step 4: Login as Organizer -->
+    <div class="section">
+        <h2>Step 4: Login (After Approval)</h2>
+        <p style="color: #666;">Login again - should now be organizer!</p>
+        <input type="email" id="login2-email" placeholder="Email" value="testorg@example.com">
+        <input type="password" id="login2-password" placeholder="Password" value="password123">
+        <button onclick="loginUser('login2')">Login as Organizer</button>
+        <div id="login2-result" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        async function registerOrganizer() {
+            const resultDiv = document.getElementById('reg-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Registering...';
+
+            try {
+                const response = await fetch(`${API_URL}/api/organizer/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        organization_name: document.getElementById('reg-orgname').value,
+                        email: document.getElementById('reg-email').value,
+                        phone: document.getElementById('reg-phone').value,
+                        password: document.getElementById('reg-password').value,
+                        organizer_type: document.getElementById('reg-type').value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = '✅ SUCCESS!\n\n' + JSON.stringify(data, null, 2);
+                    
+                    // Auto-fill application ID for admin step
+                    if (data.application && data.application.id) {
+                        document.getElementById('admin-app-id').value = data.application.id;
+                    }
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ ERROR!\n\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ ERROR!\n\n' + error.message;
+            }
+        }
+
+        async function loginUser(prefix) {
+            const resultDiv = document.getElementById(`${prefix}-result`);
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById(`${prefix}-email`).value,
+                        password: document.getElementById(`${prefix}-password`).value
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = '✅ LOGIN SUCCESS!\n\n' + 
+                        `User ID: ${data.user.id}\n` +
+                        `Email: ${data.user.email}\n` +
+                        `Role: ${data.user.role} ${data.user.role === 'organizer' ? '🎉' : ''}\n\n` +
+                        'Full Response:\n' + JSON.stringify(data, null, 2);
+                    
+                    // Store token for admin operations
+                    if (data.session && data.session.access_token) {
+                        document.getElementById('admin-token').value = data.session.access_token;
+                    }
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ LOGIN FAILED!\n\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ ERROR!\n\n' + error.message;
+            }
+        }
+
+        async function approveApplication() {
+            const resultDiv = document.getElementById('admin-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Approving application...';
+
+            const appId = document.getElementById('admin-app-id').value;
+            const token = document.getElementById('admin-token').value;
+
+            if (!appId || !token) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Please provide Application ID and Admin Token';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/admin/applications/${appId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = '✅ APPLICATION APPROVED!\n\n' + JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '❌ APPROVAL FAILED!\n\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ ERROR!\n\n' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

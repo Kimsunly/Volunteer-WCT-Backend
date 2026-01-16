@@ -491,7 +491,75 @@ async def get_organizer_profile(current_user = Depends(get_current_user)):
         raise
     except Exception as e:
         print(f"Get profile error: {e}")
+
+@router.get("/dashboard")
+async def get_organizer_dashboard(current_user = Depends(get_current_user)):
+    """Get organizer dashboard statistics"""
+    supabase = get_supabase()
+    user_id = extract_user_id(current_user)
+    
+    try:
+        # Check if organizer
+        org_check = supabase.table("organizer_profiles")\
+            .select("id")\
+            .match({"user_id": user_id})\
+            .execute()
+            
+        if not org_check.data:
+            # If not verified organizer, return empty stats or forbidden
+            # For dashboard, maybe just return empty / pending msg
+            return {
+                "opportunities_count": 0,
+                "applications_total": 0,
+                "applications_pending": 0,
+                "applications_approved": 0
+            }
+        
+        organizer_id = org_check.data[0]['id']
+        
+        # Get opportunities count
+        opps = supabase.table("opportunities")\
+            .select("id", count="exact")\
+            .eq("organizer_id", organizer_id)\
+            .execute()
+        
+        opp_count = opps.count or 0
+        opp_ids = [o['id'] for o in (opps.data or [])]
+        
+        # Get applications stats
+        # If no opportunities, no applications
+        if not opp_ids:
+            return {
+                "opportunities_count": 0,
+                "applications_total": 0,
+                "applications_pending": 0,
+                "applications_approved": 0
+            }
+            
+        # We can't easily do IN query for count breakdown in one go with simple Postgrest client 
+        # without writing raw SQL or multiple queries. 
+        # Using a view would be better, but for now we'll do a simple fetch.
+        
+        apps = supabase.table("applications")\
+            .select("status")\
+            .in_("opportunity_id", opp_ids)\
+            .execute()
+            
+        app_list = apps.data or []
+        total = len(app_list)
+        pending = sum(1 for a in app_list if a['status'] == 'pending')
+        approved = sum(1 for a in app_list if a['status'] == 'approved')
+        
+        return {
+            "opportunities_count": opp_count,
+            "applications_total": total,
+            "applications_pending": pending,
+            "applications_approved": approved
+        }
+        
+    except Exception as e:
+        print(f"Dashboard error: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to get profile: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load dashboard: {str(e)}"
         )

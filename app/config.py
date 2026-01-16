@@ -34,6 +34,7 @@ class Settings:
     # Storage buckets (override via env vars if your buckets are named differently)
     STORAGE_AVATAR_BUCKET = os.getenv("AVATAR_BUCKET", "avatars")
     STORAGE_OPPORTUNITY_BUCKET = os.getenv("OPPORTUNITY_BUCKET", "opportunity-images")
+    STORAGE_CV_BUCKET = os.getenv("CV_BUCKET", "cvs")
     
     # Validation
     def validate(self):

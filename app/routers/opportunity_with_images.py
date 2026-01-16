@@ -16,6 +16,70 @@ from app.utils.image_upload import (
 router = APIRouter(prefix="/api/opportunities", tags=["Opportunities"])
 
 
+@router.get(
+    "/",
+    response_model=OpportunityListResponse,
+    summary="List opportunities (public)"
+)
+async def list_opportunities(
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    page: int = 1,
+    pageSize: int = 20,
+    sort: str = "newest"
+):
+    """List public opportunities with filters."""
+    supabase = get_supabase()
+    
+    try:
+        # Start building the query
+        query = supabase.table("opportunities")\
+            .select("*, organizer:organizer_id(organization_name)", count="exact")\
+            .eq("status", "active")\
+            .eq("visibility", "public")
+        
+        # Filters
+        if q:
+            query = query.ilike("title", f"%{q}%")
+        
+        if category and category != "all":
+            query = query.eq("category_label", category)
+            
+        # Sorting
+        if sort == "newest":
+            query = query.order("created_at", desc=True)
+        elif sort == "oldest":
+            query = query.order("created_at", desc=False)
+            
+        # Pagination
+        limit = pageSize
+        offset = (page - 1) * limit
+        query = query.range(offset, offset + limit - 1)
+        
+        response = query.execute()
+        
+        # Handle count safely
+        total_count = 0
+        if hasattr(response, 'count') and response.count is not None:
+             total_count = response.count
+        elif response.data:
+             total_count = len(response.data)
+        
+        return OpportunityListResponse(
+            data=response.data or [],
+            total=total_count,
+            limit=limit,
+            offset=offset
+        )
+        
+    except Exception as e:
+        print(f"List opportunities error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list opportunities: {str(e)}"
+        )
+
+
 def parse_date_field(value: Optional[str]) -> Optional[date]:
     """Parse ISO date string to date object"""
     if value is None or value == "":
@@ -102,23 +166,75 @@ async def create_opportunity(
     organization: Optional[str] = Form(None),
     date_range: Optional[str] = Form(None),
     time_range: Optional[str] = Form(None),
-    capacity: Optional[int] = Form(None),
+    capacity: Optional[str] = Form(None), # Changed to str to handle empty strings
     transport: Optional[str] = Form(None),
     housing: Optional[str] = Form(None),
     meals: Optional[str] = Form(None),
+    # Add missing fields expected by frontend
+    skills: Optional[str] = Form(None),  # JSON string
+    tasks: Optional[str] = Form(None),   # JSON string
+    impact_description: Optional[str] = Form(None),
+    is_private: Optional[bool] = Form(False),
+    access_key: Optional[str] = Form(None),
     images: List[UploadFile] = File(default=[]),
     organizer_profile: dict = Depends(get_organizer_profile)
 ):
+    import json
+    import traceback
+    import sys
+
     """Create a new opportunity with optional images."""
     supabase = get_supabase()
     organizer_id = organizer_profile["id"]
+    
+    # DEBUG LOGGING
+    print(f"DEBUG create_opportunity received:", file=sys.stderr)
+    print(f" - title: {title}", file=sys.stderr)
+    print(f" - date_range: {date_range}", file=sys.stderr)
+    print(f" - capacity: {capacity}", file=sys.stderr)
+    print(f" - skills: {skills}", file=sys.stderr)
+    print(f" - tasks: {tasks}", file=sys.stderr)
+    sys.stderr.flush()
 
     try:
         parsed_date = parse_date_field(date_range)
-        parsed_time = parse_time_field(time_range)
+        # time_range is treated as text now (e.g. "8am - 5pm")
+        
+        # Handle capacity parsing safely
+        parsed_capacity = None
+        if capacity and capacity.strip():
+            try:
+                parsed_capacity = int(capacity)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Capacity must be a number"
+                )
+
+        # Parse JSON fields to lists
+        parsed_skills = []
+        if skills:
+            try:
+                parsed_skills = json.loads(skills)
+            except Exception:
+                parsed_skills = [] # Fallback or keep as None?
+
+        parsed_tasks = []
+        if tasks:
+            try:
+                parsed_tasks = json.loads(tasks)
+            except Exception:
+                parsed_tasks = []
+
+        # Handle password hashing for private opportunities
+        access_key_hash = None
+        if is_private and access_key:
+            from app.utils.security import hash_secret
+            access_key_hash = hash_secret(access_key)
 
         image_urls = []
-        if images and images[0].filename:
+        # Check if any images provided (images list is not empty and first item has filename)
+        if images and len(images) > 0 and images[0].filename:
             image_urls = await upload_multiple_opportunity_images(images, organizer_id, max_files=5)
 
         data = {
@@ -129,14 +245,18 @@ async def create_opportunity(
             "images": image_urls_to_string(image_urls) if image_urls else None,
             "description": description,
             "organization": organization,
-            # Supabase client sends JSON; native date/time objects aren't JSON serializable.
-            # Store as ISO strings (compatible with Postgres date/time columns too).
             "date_range": parsed_date.isoformat() if parsed_date else None,
-            "time_range": parsed_time.isoformat() if parsed_time else None,
-            "capacity": capacity,
+            "time_range": time_range, # Store as string directly
+            "capacity": parsed_capacity,
             "transport": transport,
             "housing": housing,
             "meals": meals,
+            # Add new fields to DB payload (parsed)
+            "skills": parsed_skills,
+            "tasks": parsed_tasks, 
+            "impact_description": impact_description,
+            "is_private": is_private,
+            "access_key_hash": access_key_hash
         }
 
         # The Supabase python client sometimes returns only a subset of columns on insert
@@ -151,10 +271,10 @@ async def create_opportunity(
             )
 
         inserted = insert_result.data[0]
+        # ... rest of retrieval logic ...
         inserted_id = inserted.get("id")
         if not inserted_id:
-            # Fall back to selecting the most recent row for this organizer/title.
-            # (Not perfect, but better than a response validation crash.)
+             # Fall back to selecting the most recent row for this organizer/title.
             latest = (
                 supabase.table("opportunities")
                 .select("*")
@@ -182,6 +302,7 @@ async def create_opportunity(
         raise
     except Exception as e:
         print(f"Create opportunity error: {e}")
+        traceback.print_exc() # Print full traceback
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create opportunity: {str(e)}"
@@ -290,8 +411,23 @@ async def update_opportunity(
                 detail="You can only update opportunities you created"
             )
 
-        update_data = payload.model_dump(exclude_none=True)
+        # Handle access key hashing if it's being updated
+        if payload.is_private and payload.access_key:
+             from app.utils.security import hash_secret
+             payload.access_key = None # Don't store plain text
+             # We need to inject access_key_hash into update_data manually
+             # but strictly speaking we'd need a field on the model or stick it in the dict
+             pass 
 
+        update_data = payload.model_dump(exclude_unset=True) # exclude_unset is safer than exclude_none for partial updates
+
+        # Handle password hashing
+        if "access_key" in update_data and update_data["access_key"]:
+            from app.utils.security import hash_secret
+            update_data["access_key_hash"] = hash_secret(update_data.pop("access_key"))
+        
+        # If skills/tasks are None/null in DB but present here, supabase handles list->json
+        
         if not update_data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -311,7 +447,10 @@ async def update_opportunity(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Update opportunity error: {e}")
+        import traceback
+        import sys
+        print(f"Update opportunity error: {e}", file=sys.stderr)
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update opportunity: {str(e)}"

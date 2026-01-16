@@ -2,6 +2,9 @@
 Security and authentication utilities
 """
 from fastapi import Depends, HTTPException, status
+from typing import Optional
+import asyncio
+import hashlib
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from gotrue.errors import AuthApiError
 from app.database import get_supabase
@@ -20,7 +23,8 @@ async def get_current_user(
     
     try:
         # Get user from token
-        response = supabase.auth.get_user(token)
+        # Run blocking Supabase call in a thread to unblock event loop
+        response = await asyncio.to_thread(supabase.auth.get_user, token)
         
         if not response or not response.user:
             raise HTTPException(
@@ -50,6 +54,23 @@ async def get_current_user(
         )
 
 
+
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+):
+    """
+    Get current user if authenticated, else return None
+    Useful for endpoints that can be accessed publicly but show more info to logged-in users
+    """
+    if not credentials:
+        return None
+        
+    try:
+        return await get_current_user(credentials)
+    except HTTPException:
+        return None
+
+
 def extract_user_id(user) -> str:
     """
     Extract user_id as clean UUID string
@@ -73,4 +94,12 @@ def extract_user_id(user) -> str:
         print(f"ERROR: Invalid UUID format: {user_id_str}")
         raise ValueError(f"Invalid user_id format: {user_id_str} (length: {len(user_id_str)})")
     
+    
     return user_id_str
+
+
+def hash_secret(secret: str) -> str:
+    """Hash a secret string using SHA256"""
+    if not secret:
+        return ""
+    return hashlib.sha256(str(secret).encode()).hexdigest()

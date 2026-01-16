@@ -280,4 +280,47 @@ def image_urls_to_string(urls: List[str]) -> str:
     Returns:
         Comma-separated string
     """
-    return ','.join(urls)
+
+async def upload_user_cv(
+    file: UploadFile,
+    user_id: str
+) -> str:
+    """
+    Upload a user's CV to Supabase Storage.
+    
+    Args:
+        file: The uploaded file (PDF, Docx, etc)
+        user_id: ID of the user
+        
+    Returns:
+        Public URL of the uploaded CV
+    """
+    supabase = get_supabase()
+    bucket_name = getattr(settings, "STORAGE_CV_BUCKET", "cvs")
+    
+    # Clean filename
+    unique_filename = generate_unique_filename(file.filename)
+    file_path = f"{user_id}/{unique_filename}"
+    
+    try:
+        content = await file.read()
+        
+        # Upload
+        supabase.storage.from_(bucket_name).upload(
+            path=file_path,
+            file=content,
+            file_options={"upsert": "false"}
+        )
+        
+        # Get URL
+        public_url = supabase.storage.from_(bucket_name).get_public_url(file_path)
+        return public_url
+        
+    except Exception as e:
+        print(f"CV Upload Error: {e}")
+        # For now, if upload fails (e.g. bucket missing), just return None or raise
+        # Choosing to raise to match expected behavior
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload CV: {str(e)}"
+        )
