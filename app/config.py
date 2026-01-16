@@ -25,8 +25,25 @@ class Settings:
     ALLOWED_ORIGINS = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-  
     ]
+    
+    # Allow overriding origins via environment variable
+    _env_origins = os.getenv("ALLOWED_ORIGINS")
+    if _env_origins:
+        # Check if it's the wildcard "*"
+        if _env_origins.strip() == "*":
+            ALLOWED_ORIGINS = ["*"]
+        else:
+            try:
+                import json
+                parsed_origins = json.loads(_env_origins)
+                if isinstance(parsed_origins, list):
+                    ALLOWED_ORIGINS = parsed_origins
+                else:
+                    ALLOWED_ORIGINS = [str(parsed_origins)]
+            except Exception:
+                # Fallback: split by comma if not valid JSON
+                ALLOWED_ORIGINS = [o.strip() for o in _env_origins.split(",") if o.strip()]
     
     # File Upload
     MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB

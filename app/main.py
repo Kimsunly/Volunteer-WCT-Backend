@@ -17,11 +17,6 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-origins = [
-    "http://localhost:3000",   
-    "http://127.0.0.1:3000",
-]
-
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -31,26 +26,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Temporary debugging middleware to log OPTIONS preflight requests
-from fastapi import Request
-
-@app.middleware("http")
-async def log_options_request(request: Request, call_next):
-    if request.method == "OPTIONS":
-        try:
-            headers = {k: v for k, v in request.headers.items()}
-            print("DEBUG OPTIONS request:", request.url.path, headers)
-        except Exception as e:
-            print("DEBUG: failed to log OPTIONS headers", e)
-    return await call_next(request)
-
-# Mount static files (package-relative so imports work from anywhere)
+# Mount static files
 from pathlib import Path
 static_path = Path(__file__).parent / "static"
 if static_path.exists():
     app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
-else:
-    print(f"⚠️  Warning: 'static' directory not found at {static_path}")
 
 # Include routers
 app.include_router(auth.router)
